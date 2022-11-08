@@ -1,16 +1,17 @@
+""" This file is for functions and classes used to connect to the instruments """
+
 from pyvisa import ResourceManager
 from pyvisa.resources import TCPIPInstrument
 from pyvisa.errors import VisaIOError
 
-rm = ResourceManager()
+from core.utils import frequency_to_wavelength, wavelength_to_frequency, unit_conversion
 
-unit_conversion = {"NM": 1e-9, "UM": 1e-6, "MM": 1e-3, "THZ": 1e12, "GHZ": 1e9, "MHZ": 1e6, "KHZ": 1e3}
-c = 299792458
+rm = ResourceManager()
 
 class LaserManager:
     """ Wrapper class for managing laser instruments
-        Quantifi laser commands can be found here:
-        https://cdn.quantifiphotonics.com/20220328111213/O2E_1000-1400_Series_UserManual_V3p06.pdf"""
+        Quantifi SCPI laser commands can be found here:
+        https://cdn.quantifiphotonics.com/20210708163934/OSA_1000_Series_UserManual_V2p02.pdf"""
 
     def __init__(self, resource_name: str = 'TCPIP0::192.168.101.201::inst0::INSTR'):
         instrument = rm.open_resource(resource_name)
@@ -23,12 +24,27 @@ class LaserManager:
         self.frequency_unit = "THZ"
         self.power_unit = "DBM"
 
-    def _send_message(self, message: str):
+        self.source = ":SOURCE1"
+        self.output = ":OUTP1"
+        self.channel = ":CHAN1"
+
+    @property
+    def source_prefix(self):
+        return self.source + self.channel
+
+    @property
+    def output_prefix(self):
+        return self.output + self.channel
+
+    def _send_message(self, message: str, read: bool=True):
         try:
-            return self.instrument.query(message)
+            if read:
+                return self.instrument.query(message).strip("\n")
+            else:
+                self.instrument.write(message)
         except VisaIOError as e:
             self._check_error()
-            raise VisaIOError(e)
+            raise IOError(e)
 
     def _check_error(self):
         """ '*ESR?' to check standard event Status Register. This will show any errors
@@ -38,11 +54,11 @@ class LaserManager:
         """
         error = int(self.instrument.query("*ESR?"))
         if error == 32:
-            raise VisaIOError("Command Error")
+            raise IOError("Command Error")
         elif error == 16:
-            raise VisaIOError("Execution Error")
+            raise IOError("Execution Error")
         elif error == 8:
-            raise VisaIOError("Device Dependent Error")
+            raise IOError("Device Dependent Error")
         else:
             return
 
@@ -53,42 +69,59 @@ class LaserManager:
         0 is returned if any module installed in the chassis still has a command to execute in the
         input queue
         """
-        self._send_message('*OPC?')
+        return self._send_message('*OPC?')
 
-    def _frequency_to_wavelength(self, frequency: float):
-        return c / (frequency*unit_conversion[self.frequency_unit]*unit_conversion[self.wavelength_unit])
-
-    def _wavelength_to_frequency(self, wavelength: float):
-        return c / (wavelength*unit_conversion[self.frequency_unit]*unit_conversion[self.wavelength_unit])
+    @property
+    def _identify(self):
+        return self._send_message("*IDN?")
 
     def set_frequency(self, frequency: float):
-        self.set_wavelength(self._frequency_to_wavelength(frequency))
+        self._send_message(f"{self.source_prefix}:FREQ {frequency} {self.frequency_unit}", read=False)
 
     def shift_frequency(self, frequency_shift: float):
-        self.shift_wavelength(self._frequency_to_wavelength(frequency_shift))
+        frequency = self.get_frequency()
+        self.set_frequency(frequency + frequency_shift)
 
     def get_frequency(self):
-        self._wavelength_to_frequency(self.get_wavelength())
+        return float(self._send_message(f"{self.source_prefix}:FREQ?")) / unit_conversion[self.frequency_unit]
 
     def set_wavelength(self, wavelength: float):
-        self._send_message(f"WAVelength {wavelength} {self.wavelength_unit}")
+        self._send_message(f"{self.source_prefix}:WAV {wavelength} {self.wavelength_unit}", read=False)
 
     def shift_wavelength(self, wavelength_shift: float):
         wavelength = self.get_wavelength()
         self.set_wavelength(wavelength + wavelength_shift)
 
     def get_wavelength(self):
-        return self._send_message("WAVelength?")
+        return float(self._send_message(f"{self.source_prefix}:WAV?")) / unit_conversion[self.wavelength_unit]
 
     def set_power(self, power: float):
-        self._send_message(f"PDPower {power} {self.power_unit}")
+        self._send_message(f"{self.source_prefix}:POW {power} {self.power_unit}", read=False)
 
     def shift_power(self, power_shift: float):
         power = self.get_power()
         self.set_power(power + power_shift)
 
     def get_power(self):
-        return self._send_message("PDPower?")
+        return float(self._send_message(f"{self.source_prefix}:POW?"))
+
+    def set_state(self, state: bool):
+        self._send_message(f"{self.output_prefix}:STATE {'ON' if state else 'OFF'}", read=False)
+
+    def get_state(self):
+        state = self._send_message(f"{self.output_prefix}:STATE?")
+        return True if state == "ON" else False
+
+    def __repr__(self):
+        return f"<{self._identify}, {self.instrument}>"
+
+
+class PowerMeterManager:
+    """ Wrapper class for managing power meter instruments
+        Thorlab power meter SCPI commands can be found here:
+        https://www.thorlabs.com/drawings/3c723420dbbe302b-628E3525-E1CC-62FF-6BDFDA05526B9FE3/PM100D-Manual.pdf
+    """
+    pass
 
 
 if __name__ == "__main__":
