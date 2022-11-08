@@ -1,0 +1,27 @@
+[[package]]
+name = "pyvisa"
+version = "1.12.0"
+description = "Python VISA bindings for GPIB, RS232, TCPIP and USB instruments"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+typing-extensions = "*"
+
+[[package]]
+name = "typing-extensions"
+version = "4.4.0"
+description = "Backported and Experimental Type Hints for Python 3.7+"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[metadata]
+lock-version = "1.1"
+python-versions = "^3.10"
+content-hash = "78db2badea80feea7063c0647b9e2adfda4ff967ee6caafc965bd3653b88efbe"
+
+[metadata.files]
+pyvisa = []
+typing-extensions = []
