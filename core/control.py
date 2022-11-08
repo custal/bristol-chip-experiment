@@ -1,6 +1,6 @@
 """ This file is for functions and classes used to control the instruments """
 
-from core.instruments import LaserManager, PowerMeterManager
+from core.instruments import QuantifiManager, PowerMeterManager
 import numpy as np
 
 from core.utils import frequency_to_wavelength
