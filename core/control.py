@@ -2,19 +2,65 @@
 
 from core.instruments import QuantifiManager, PowerMeterManager
 import numpy as np
+import pickle
+from datetime import date
+import time
+today = str(date.today())
 
 class ExperimentalSetUp:
     """ Class used to handle the experimental setup of a laser with a power meter """
-
+    
     def __init__(self, laser: QuantifiManager, power_meter: PowerMeterManager):
 
         self.laser = laser
         self.power_meter = power_meter
 
-    def perform_wavelength_sweep(self, wavelength_start: float, wavelength_end: float, step: float):
-        for wavelength in np.arange(wavelength_start, wavelength_end, step):
+    def perform_wavelength_sweep(self, wavelength_start: float, wavelength_end: float, steps: int,
+    delay = 5, filename:str = "",save:bool = True, verbose:bool = True):
+        """
+        Performs a sweep over the given start/stop frequencies. Returns an array of dBm readings
+        from the power meter saved as a binary file.
+
+        Arguments:
+        wavelength_start: starting wavelength (inclusive in sweep) of laser in nm
+        wavelength_end: ending wavelength (inclusive in sweep) in nm
+        steps: no. of data points
+        save: if True, will save power_readings as a binary file
+        filename: name of file to be saved
+        delay: seconds to wait after setting the laser to a new wavelength before taking data from the meter
+        verbose: if True, will print current wavelength being scanned, as well as power meter reading
+
+        Returns:
+        power_readings: array object with dim(steps) of power readings from the power meter
+        
+
+        """
+        power_readings = np.zeros(steps)
+
+        for i,wavelength in enumerate(np.linspace(wavelength_start, wavelength_end, steps)):
+            if verbose:
+                print("-----Conducting laser sweep")
+                print("Parameters:-----------")
+                print("Laser start/stop/steps:",wavelength_start,wavelength_end,steps)
+                print("Delay before measurement:",delay)
+                print("----------------------")
             self.laser.set_wavelength(wavelength)
-            self.power_meter.read()
+            time.sleep(delay)
+            power_readings[i] = self.power_meter.read()
+            if verbose:
+                print("Current laser frequency:",wavelength)
+                print("Power meter reading:",power_readings[i])
+        if save:
+            pickle.dump(power_readings,open(today+"_laser_sweep_"+filename))
+        
+        if verbose:
+            if save:
+                print("Sweep completed, data saved under",today+"_laser_sweep_"+filename)
+            else:
+                print("Sweep completed")
+        return power_readings
+            
+
 
 if __name__ == "__main__":
     from core.utils import MockInstrument
