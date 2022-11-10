@@ -1,7 +1,7 @@
 """ This file is for functions and classes used to connect to the instruments """
 
 from pyvisa import ResourceManager
-from pyvisa.resources import TCPIPInstrument
+from pyvisa.resources import TCPIPInstrument, USBInstrument
 from pyvisa.errors import VisaIOError
 
 from core.utils import frequency_to_wavelength, wavelength_to_frequency, unit_conversion
@@ -123,50 +123,52 @@ class PowerMeterManager(InstrumentManager):
         Thorlab power meter SCPI commands can be found here:
         https://www.thorlabs.com/drawings/3c723420dbbe302b-628E3525-E1CC-62FF-6BDFDA05526B9FE3/PM100D-Manual.pdf
     """
-    def __init__(self, resource_name: str = None):
+    def __init__(self, resource_name: str = 'USB0::0x1313::0x8078::P0010441::INSTR'):
         super().__init__(resource_name)
 
-        if not isinstance(self.instrument, None):
-            raise TypeError(f"The instrument with name '{resource_name}' is not of type {None}.")
+        if not isinstance(self.instrument, USBInstrument):
+            raise TypeError(f"The instrument with name '{resource_name}' is not of type {USBInstrument}.")
 
         self.wavelength_unit = "NM"
         self.frequency_unit = "THZ"
-        self.power_unit = "DBM"
+        self._power_unit = "DBM"
+        self.power_unit = self._power_unit
 
-        self.source = ":SOURCE1"
-        self.output = ":OUTP1"
-        self.channel = ":CHAN1"
-
-    @property
-    def source_prefix(self):
-        return self.source + self.channel
+        self.sense = ":SENSE"
+        self.correction = ":CORRECTION"
 
     @property
-    def output_prefix(self):
-        return self.output + self.channel
+    def sense_prefix(self):
+        return self.sense + self.correction
 
-    def set_frequency(self, frequency: float):
-        self._send_message(f"{self.source_prefix}:FREQ {frequency} {self.frequency_unit}", read=False)
+    @property
+    def power_unit(self):
+        return self._power_unit
 
-    def shift_frequency(self, frequency_shift: float):
-        frequency = self.get_frequency()
-        self.set_frequency(frequency + frequency_shift)
+    @power_unit.setter
+    def power_unit(self, unit: str):
+        unit = unit.upper()
+        if unit not in ("DBM", "W"):
+            raise ValueError(f"Power unit '{unit}' must be either 'DBM' or 'W'")
 
-    def get_frequency(self):
-        return float(self._send_message(f"{self.source_prefix}:FREQ?")) / unit_conversion[self.frequency_unit]
+        self._send_message(f":SENSE:POWER:DC:UNIT {unit}", read=False)
+        self._send_message("Configure:Scalar:POWer", read=False)
+        self._power_unit = unit
 
     def set_wavelength(self, wavelength: float):
-        self._send_message(f"{self.source_prefix}:WAV {wavelength} {self.wavelength_unit}", read=False)
+        self._send_message(f"{self.sense_prefix}:WAV {wavelength} {self.wavelength_unit}", read=False)
 
     def shift_wavelength(self, wavelength_shift: float):
         wavelength = self.get_wavelength()
         self.set_wavelength(wavelength + wavelength_shift)
 
     def get_wavelength(self):
-        return float(self._send_message(f"{self.source_prefix}:WAV?")) / unit_conversion[self.wavelength_unit]
+        # The power meter always returns wavelength in units of 'nm'
+        return float(self._send_message(f"{self.sense_prefix}:WAV?")) * \
+                     unit_conversion[self.wavelength_unit] / unit_conversion["NM"]
 
     def read(self):
-        pass
+        return self._send_message(":READ?")
 
 
 if __name__ == "__main__":
