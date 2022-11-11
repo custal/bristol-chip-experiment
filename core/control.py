@@ -16,7 +16,7 @@ class ExperimentalSetUp:
         self.power_meter = power_meter
 
     def perform_wavelength_sweep(self, wavelength_start: float, wavelength_end: float, steps: int,
-    delay = 5, filename:str = "",save:bool = True, verbose:bool = True):
+    delay = 25, filename:str = "",save:bool = True, verbose:bool = True):
         """
         Performs a sweep over the given start/stop frequencies. Returns an array of dBm readings
         from the power meter saved as a binary file.
@@ -32,24 +32,38 @@ class ExperimentalSetUp:
 
         Returns:
         power_readings: array object with dim(steps) of power readings from the power meter
-        
+        If save is true, returns a binary saved as "today+"_laser_sweep_"+filename"
 
         """
         power_readings = np.zeros(steps)
 
-        for i,wavelength in enumerate(np.linspace(wavelength_start, wavelength_end, steps)):
-            if verbose:
-                print("-----Conducting laser sweep")
-                print("Parameters:-----------")
-                print("Laser start/stop/steps:",wavelength_start,wavelength_end,steps)
-                print("Delay before measurement:",delay)
-                print("----------------------")
+        scan_range = np.linspace(wavelength_start, wavelength_end, steps)
+
+        #add exceptions
+        if scan_range[1]-scan_range[0] <= 0.001: #1pm laser resolution
+            raise Exception(f"Wavelength increase of {scan_range[1]-scan_range[0]} nm is below laser resolution")
+
+        if wavelength_start <1527.605:
+            raise Exception("Starting wavelength is below laser minimum!") #hardcoded for MATRIQ-1004
+
+        if wavelength_start >1568.773:
+            raise Exception("Starting wavelength is above laser maximum!")
+        
+        if verbose:
+            print("-----Conducting laser sweep")
+            print("Parameters:-----------")
+            print("Laser start/stop/steps:",wavelength_start,wavelength_end,steps)
+            print("Delay before measurement:",delay)
+            print("----------------------")
+        for i,wavelength in enumerate(scan_range):
+
             self.laser.set_wavelength(wavelength)
             time.sleep(delay)
             power_readings[i] = self.power_meter.read()
             if verbose:
                 print("Current laser frequency:",wavelength)
                 print("Power meter reading:",power_readings[i])
+                print("----------------------")
         if save:
             pickle.dump(power_readings,open(today+"_laser_sweep_"+filename))
         
