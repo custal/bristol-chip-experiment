@@ -65,7 +65,7 @@ class ExperimentalSetUp:
                 print("Power meter reading:",power_readings[i])
                 print("----------------------")
         if save:
-            pickle.dump(power_readings,open(today+"_laser_sweep_"+filename))
+            pickle.dump(power_readings,open(today+"_laser_sweep_"+filename,"wb"))
         
         if verbose:
             if save:
