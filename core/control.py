@@ -40,29 +40,23 @@ class ExperimentalSetUp:
         scan_range = np.linspace(wavelength_start, wavelength_end, steps)
 
         #add exceptions
-        if scan_range[1]-scan_range[0] <= 0.001: #1pm laser resolution
+        if scan_range[1]-scan_range[0] <= self.laser.resolution: #1pm laser resolution
             raise Exception(f"Wavelength increase of {scan_range[1]-scan_range[0]} nm is below laser resolution")
-
-        if wavelength_start <1527.605:
-            raise Exception("Starting wavelength is below laser minimum!") #hardcoded for MATRIQ-1004
-
-        if wavelength_start >1568.773:
-            raise Exception("Starting wavelength is above laser maximum!")
         
         if verbose:
             print("-----Conducting laser sweep")
             print("Parameters:-----------")
-            print("Laser start/stop/steps:",wavelength_start,wavelength_end,steps)
-            print("Delay before measurement:",delay)
+            print("Laser start/stop/steps:", wavelength_start, wavelength_end, steps)
+            print("Delay before measurement:", delay)
             print("----------------------")
-        for i,wavelength in enumerate(scan_range):
+        for i, wavelength in enumerate(scan_range):
 
             self.laser.set_wavelength(wavelength)
             time.sleep(delay)
             power_readings[i] = self.power_meter.read()
             if verbose:
-                print("Current laser frequency:",wavelength)
-                print("Power meter reading:",power_readings[i])
+                print("Current laser frequency:", wavelength)
+                print("Power meter reading:", power_readings[i])
                 print("----------------------")
         if save:
             pickle.dump(power_readings,open(today+"_laser_sweep_"+filename,"wb"))
