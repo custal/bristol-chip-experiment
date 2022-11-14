@@ -4,7 +4,7 @@ from pyvisa import ResourceManager
 from pyvisa.resources import TCPIPInstrument, USBInstrument
 from pyvisa.errors import VisaIOError
 
-from core.utils import frequency_to_wavelength, wavelength_to_frequency, unit_conversion
+from utils import frequency_to_wavelength, wavelength_to_frequency, unit_conversion
 
 rm = ResourceManager()
 
@@ -73,10 +73,14 @@ class QuantifiManager(InstrumentManager):
         self.frequency_unit = "THZ"
         self.power_unit = "DBM"
         self.resolution = 0.001 # WARNING: This is in nm and doesn't consider wavelength_unit
+        self.defined_power = 10.0 #in dBm
 
         self.source = ":SOURCE1"
         self.output = ":OUTP1"
         self.channel = ":CHAN1"
+        
+        self.set_power(7.5) #default power is 10
+
 
     @property
     def source_prefix(self):
@@ -128,6 +132,7 @@ class QuantifiManager(InstrumentManager):
 
     def set_power(self, power: float):
         self._send_message(f"{self.source_prefix}:POW {power} {self.power_unit}", read=False)
+        self.defined_power = power
 
     def shift_power(self, power_shift: float):
         power = self.get_power()

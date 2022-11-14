@@ -53,8 +53,15 @@ class ExperimentalSetUp:
         for i, wavelength in enumerate(scan_range):
 
             self.laser.set_wavelength(wavelength)
-            time.sleep(delay)
+            # time.sleep(delay)
+            # power_readings[i] = self.power_meter.read()
+
+            # check laser power to determine when to take measurement
+            while self.laser.get_power() != self.laser.defined_power:
+                time.sleep(2) #checks for stability every 2 seconds
+            time.sleep(4) #wait another 4 seconds after reaching stability
             power_readings[i] = self.power_meter.read()
+            
             if verbose:
                 print("Current laser frequency:", wavelength)
                 print("Power meter reading:", power_readings[i])
@@ -88,7 +95,6 @@ if __name__ == "__main__":
     setup = ExperimentalSetUp(laser, power_meter)
 
     laser.set_state(True)
-    time.sleep(25)
     result = setup.perform_wavelength_sweep(1546.72, 1547.22, 6)
     laser.set_state(False)
     print(result)
