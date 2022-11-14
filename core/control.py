@@ -1,8 +1,7 @@
 """ This file is for functions and classes used to control the instruments """
 
-from core.instruments import QuantifiManager, PowerMeterManager
+from instruments import QuantifiManager, PowerMeterManager
 import numpy as np
-import pickle
 from datetime import date
 import time
 today = str(date.today())
@@ -32,7 +31,9 @@ class ExperimentalSetUp:
 
         Returns:
         power_readings: array object with dim(steps) of power readings from the power meter
-        If save is true, returns a binary saved as "today+"_laser_sweep_"+filename"
+        If save is true, returns a text file saved as "today+"_laser_sweep_"+filename.txt"
+        The text file contains a header line "wavelength_nm power_dbm" followed by lines of the
+        laser wavelength and power meter readings.
 
         """
         power_readings = np.zeros(steps)
@@ -59,11 +60,19 @@ class ExperimentalSetUp:
                 print("Power meter reading:", power_readings[i])
                 print("----------------------")
         if save:
-            pickle.dump(power_readings,open(today+"_laser_sweep_"+filename,"wb"))
+            with open(today+"_laser_sweep_"+filename+".txt","w") as f:
+
+                #write the header
+                f.write("wavelength_nm power_dbm\n")
+
+                #write the power meter readings
+                for i,power in enumerate(power_readings):
+                    f.write(wavelength[i]+" "+power+"\n")
+                f.close()
         
         if verbose:
             if save:
-                print("Sweep completed, data saved under",today+"_laser_sweep_"+filename)
+                print("Sweep completed, data saved under",today+"_laser_sweep_"+filename+".txt")
             else:
                 print("Sweep completed")
         return power_readings
@@ -72,11 +81,14 @@ class ExperimentalSetUp:
 
 
 if __name__ == "__main__":
-    from core.utils import MockInstrument
+    from utils import MockInstrument
 
-    laser = MockInstrument()
-    power_meter = MockInstrument()
+    laser = QuantifiManager()
+    power_meter = PowerMeterManager()
     setup = ExperimentalSetUp(laser, power_meter)
 
-    result = setup.perform_wavelength_sweep(1450, 1555, 0.5)
+    laser.set_state(True)
+    time.sleep(25)
+    result = setup.perform_wavelength_sweep(1546.72, 1547.22, 6)
+    laser.set_state(False)
     print(result)
