@@ -337,7 +337,7 @@ class PowerMeterManager(InstrumentManager):
     """ Wrapper class for managing power meter instruments
         Thorlab power meter SCPI commands can be found in the docs folder
     """
-    def __init__(self, resource_name: str = 'USB0::0x1313::0x8078::P0010441::INSTR'):
+    def __init__(self, resource_name: str = 'USB0::0x1313::0x8078::P0010441::INSTR', average: int = 100):
         super().__init__(resource_name)
 
         if not isinstance(self.instrument, USBInstrument):
@@ -350,6 +350,7 @@ class PowerMeterManager(InstrumentManager):
 
         self.sense = ":SENSE"
         self.correction = ":CORRECTION"
+        self.set_average(average)
 
     @property
     def sense_prefix(self):
@@ -371,6 +372,12 @@ class PowerMeterManager(InstrumentManager):
 
     def set_wavelength(self, wavelength: float):
         self._send_message(f"{self.sense_prefix}:WAV {wavelength} {self.wavelength_unit}", read=False)
+
+    def set_average(self, average: int):
+        self._send_message(f":SENSE:AVERAGE:COUNT {average}", read = False)
+
+    def get_average(self):
+        return int( self._send_message(":SENSE:AVERAGE:COUNT?"))
 
     def shift_wavelength(self, wavelength_shift: float):
         wavelength = self.get_wavelength()
