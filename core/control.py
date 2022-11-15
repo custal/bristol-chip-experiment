@@ -1,6 +1,6 @@
 """ This file is for functions and classes used to control the instruments """
 
-from .instruments import QuantifiManager, PowerMeterManager
+from instruments import QuantifiManager, PowerMeterManager
 import numpy as np
 from datetime import date
 import time
@@ -32,7 +32,7 @@ class ExperimentalSetUp:
 
     @laser_control
     def perform_wavelength_sweep(self, wavelength_start: float, wavelength_end: float, steps: int,
-    delay = 25, filename:str = "", save: bool = True, verbose: bool = True):
+    filename:str = "", save: bool = True, verbose: bool = True):
         """
         Performs a sweep over the given start/stop frequencies. Returns an array of dBm readings
         from the power meter saved as a binary file.
@@ -54,7 +54,6 @@ class ExperimentalSetUp:
 
         """
         power_readings = np.zeros(steps)
-
         scan_range = np.linspace(wavelength_start, wavelength_end, steps)
 
         #add exceptions
@@ -62,14 +61,14 @@ class ExperimentalSetUp:
             raise Exception(f"Wavelength increase of {scan_range[1]-scan_range[0]} nm is below laser resolution")
         
         if verbose:
-            print("-----Conducting laser sweep")
+            print("-----Conducting laser sweep-----")
             print("Parameters:-----------")
             print("Laser start/stop/steps:", wavelength_start, wavelength_end, steps)
-            print("Delay before measurement:", delay)
             print("----------------------")
         for i, wavelength in enumerate(scan_range):
 
             self.laser.set_wavelength(wavelength)
+            time.sleep(3)
             if self.laser.wait_steady_state() == True:
                 power_readings[i] = self.power_meter.read()
             else:
@@ -87,7 +86,7 @@ class ExperimentalSetUp:
 
                 #write the power meter readings
                 for i,power in enumerate(power_readings):
-                    f.write(wavelength[i]+","+power+"\n")
+                    f.write(str(wavelength)+","+str(power)+"\n")
                 f.close()
         
         if verbose:
@@ -107,5 +106,5 @@ if __name__ == "__main__":
     power_meter = PowerMeterManager()
     setup = ExperimentalSetUp(laser, power_meter)
 
-    result = setup.perform_wavelength_sweep(1450, 1555, 16)
+    result = setup.perform_wavelength_sweep(1546.5, 1547, 6, filename = "test_laser sweep")
     print(result)
