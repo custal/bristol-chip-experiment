@@ -70,8 +70,7 @@ class ExperimentalSetUp:
         for i, wavelength in enumerate(scan_range):
 
             self.laser.set_wavelength(wavelength)
-            if self.laser.wait_steady_state == True:
-                time.sleep(4) #wait another 4 seconds after reaching stability
+            if self.laser.wait_steady_state() == True:
                 power_readings[i] = self.power_meter.read()
             else:
                 raise Exception(f"Laser has taken more than {self.laser.max_wait_time} to stabilise")
@@ -88,7 +87,7 @@ class ExperimentalSetUp:
 
                 #write the power meter readings
                 for i,power in enumerate(power_readings):
-                    f.write(wavelength[i]+" "+power+"\n")
+                    f.write(wavelength[i]+","+power+"\n")
                 f.close()
         
         if verbose:

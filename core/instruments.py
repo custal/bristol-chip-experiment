@@ -59,11 +59,10 @@ class InstrumentManager:
         return f"<{self._identify}, {self.instrument}>"
 
 
-class TunicsManager(InstrumentManager):
+class QuantifiManager(InstrumentManager):
     """
         Wrapper class for managing the Tunics Plus laser
-        Tunics Plus laser SCPI commands can be found in the docs folder. The manual is for the Tunics T100S-HP not the
-        Tunics Plus but the commands should be similar.
+        Tunics Plus laser SCPI commands can be found in the docs folder.
     """
     def __init__(self, resource_name: str = 'TCPIP0::192.168.101.201::inst0::INSTR'):
         super().__init__(resource_name)
@@ -164,9 +163,7 @@ class TunicsManager(InstrumentManager):
         self._defined_power = power
 
     def check_steady_state(self,res = 3):
-        defined_power = self.get_power("SET")
-        current_power = self.get_power("ACT")
-        return np.round(defined_power, res) == np.round(current_power, res)
+        return np.round(self.get_power("SET"), res) == np.round(self.get_power("ACT"), res)
 
     def wait_steady_state(self):
         """
@@ -176,10 +173,10 @@ class TunicsManager(InstrumentManager):
         elapsed_time = 0
         delay_time = 1
         while elapsed_time < self.max_wait_time:
-            time.sleep(delay_time)
-            elapsed_time+=delay_time
             if self.check_steady_state():
                 return True
+            time.sleep(delay_time)
+            elapsed_time+=delay_time
         
         return False
 
@@ -208,10 +205,11 @@ class TunicsManager(InstrumentManager):
         return True if state == "ON" else False
 
 
-class QuantifiManager(InstrumentManager):
+class TunicsManager(InstrumentManager):
     """
         Wrapper class for managing the Quantifi laser
-        Quantifi laser SCPI commands can be found in the docs folder
+        Quantifi laser SCPI commands can be found in the docs folder. The manual is for the Tunics T100S-HP not the
+        Tunics Plus but the commands should be similar.
     """
 
     def __init__(self, resource_name: str = 'TCPIP0::192.168.101.201::inst0::INSTR'):
