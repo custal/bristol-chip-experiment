@@ -70,14 +70,11 @@ class ExperimentalSetUp:
         for i, wavelength in enumerate(scan_range):
 
             self.laser.set_wavelength(wavelength)
-            # time.sleep(delay)
-            # power_readings[i] = self.power_meter.read()
-
-            # check laser power to determine when to take measurement
-            while self.laser.get_power() != self.laser.defined_power:
-                time.sleep(2) #checks for stability every 2 seconds
-            time.sleep(4) #wait another 4 seconds after reaching stability
-            power_readings[i] = self.power_meter.read()
+            if self.laser.wait_steady_state == True:
+                time.sleep(4) #wait another 4 seconds after reaching stability
+                power_readings[i] = self.power_meter.read()
+            else:
+                raise Exception(f"Laser has taken more than {self.laser.max_wait_time} to stabilise")
             
             if verbose:
                 print("Current laser frequency:", wavelength)

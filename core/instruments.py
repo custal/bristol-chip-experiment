@@ -3,6 +3,8 @@
 from pyvisa import ResourceManager
 from pyvisa.resources import TCPIPInstrument, USBInstrument
 from pyvisa.errors import VisaIOError
+import time
+import numpy as np
 
 from .utils import frequency_to_wavelength, wavelength_to_frequency, unit_conversion
 
@@ -73,6 +75,7 @@ class TunicsManager(InstrumentManager):
         self.frequency_unit = "THZ"
         self.power_unit = "DBM"
         self.resolution = 0.001 # WARNING: This is in nm and doesn't consider wavelength_unit
+        self.max_wait_time = 25 #supposed to calibrate in <25s for quantifi laser
 
         self.source = ":SOURCE1"
         self.output = ":OUTP1"
@@ -158,7 +161,27 @@ class TunicsManager(InstrumentManager):
                              f"is above laser maximum '{max_power} {self.power_unit}'")
 
         self._send_message(f"{self.source_prefix}:POW {power} {self.power_unit}", read=False)
-        self.defined_power = power
+        self._defined_power = power
+
+    def check_steady_state(self,res = 3):
+        defined_power = self.get_power("SET")
+        current_power = self.get_power("ACT")
+        return np.round(defined_power, res) == np.round(current_power, res)
+
+    def wait_steady_state(self):
+        """
+        Checks if laser has reached steady state every 1 second by comparing the set and current
+        powers.
+        """
+        elapsed_time = 0
+        delay_time = 1
+        while elapsed_time < self.max_wait_time:
+            time.sleep(delay_time)
+            elapsed_time+=delay_time
+            if self.check_steady_state():
+                return True
+        
+        return False
 
     def shift_power(self, power_shift: float):
         power = self.get_power()
