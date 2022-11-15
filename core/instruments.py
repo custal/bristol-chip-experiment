@@ -4,7 +4,7 @@ from pyvisa import ResourceManager
 from pyvisa.resources import TCPIPInstrument, USBInstrument
 from pyvisa.errors import VisaIOError
 
-from utils import frequency_to_wavelength, wavelength_to_frequency, unit_conversion
+from .utils import frequency_to_wavelength, wavelength_to_frequency, unit_conversion
 
 rm = ResourceManager()
 
@@ -73,7 +73,6 @@ class QuantifiManager(InstrumentManager):
         self.frequency_unit = "THZ"
         self.power_unit = "DBM"
         self.resolution = 0.001 # WARNING: This is in nm and doesn't consider wavelength_unit
-        self.defined_power = 10.0 #in dBm
 
         self.source = ":SOURCE1"
         self.output = ":OUTP1"
@@ -111,6 +110,16 @@ class QuantifiManager(InstrumentManager):
         self.set_frequency(frequency + frequency_shift)
 
     def get_frequency(self, param: str = ""):
+        """ param (str):
+                        MIN: Return the minimum programmable value
+                        MAX: Return the maximum programmable value
+                        DEF: Return the default value of frequency
+                        SET: Return the set value (default) of the frequency in the GRID
+                        ACT: Return the actual value of the SET frequency
+                        LOCK: Query whether the laser is currently at the SET frequency
+                        ALL: Returns all of the above parameters
+        ref manual pg. 51
+        """
         return float(self._send_message(f"{self.source_prefix}:FREQ? {param}")) / unit_conversion[self.frequency_unit]
 
     def set_wavelength(self, wavelength: float):
@@ -128,9 +137,26 @@ class QuantifiManager(InstrumentManager):
         self.set_wavelength(wavelength + wavelength_shift)
 
     def get_wavelength(self, param: str = ""):
+        """ param (str):
+                        MIN: Return the minimum programmable value
+                        MAX: Return the maximum programmable value
+                        DEF: Return the default value of wavelength
+                        SET: Return the set value (default) of the wavelength in the GRID
+                        ACT: Return the actual value of the SET wavelength
+                        LOCK: Query whether the laser is currently at the SET wavelength
+                        ALL: Returns all of the above parameters
+            ref manual pg. 51
+        """
         return float(self._send_message(f"{self.source_prefix}:WAV? {param}")) / unit_conversion[self.wavelength_unit]
 
     def set_power(self, power: float):
+        if power < (min_power := self.get_power("MIN")):
+            raise ValueError(f"Power '{power} {self.power_unit}' "
+                             f"is below laser minimum '{min_power} {self.power_unit}'")
+        elif power > (max_power := self.get_power("MAX")):
+            raise ValueError(f"Power '{power} {self.power_unit}' "
+                             f"is above laser maximum '{max_power} {self.power_unit}'")
+
         self._send_message(f"{self.source_prefix}:POW {power} {self.power_unit}", read=False)
         self.defined_power = power
 
@@ -138,8 +164,18 @@ class QuantifiManager(InstrumentManager):
         power = self.get_power()
         self.set_power(power + power_shift)
 
-    def get_power(self):
-        return float(self._send_message(f"{self.source_prefix}:POW?"))
+    def get_power(self, param: str = ""):
+        """ param (str):
+                        MIN: Return the minimum programmable value
+                        MAX: Return the maximum programmable value
+                        DEF: Return the default value of power
+                        SET: Return the desired set value
+                        ACT: Return the current value (default)
+                        ALL: Returns all of the above parameters
+
+            ref manual pg. 50
+        """
+        return float(self._send_message(f"{self.source_prefix}:POW? {param}"))
 
     def set_state(self, state: bool):
         self._send_message(f"{self.output_prefix}:STATE {'ON' if state else 'OFF'}", read=False)

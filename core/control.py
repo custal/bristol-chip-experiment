@@ -1,6 +1,6 @@
 """ This file is for functions and classes used to control the instruments """
 
-from instruments import QuantifiManager, PowerMeterManager
+from .instruments import QuantifiManager, PowerMeterManager
 import numpy as np
 from datetime import date
 import time
