@@ -87,10 +87,8 @@ class ExperimentalSetUp:
 
 
         if save: #save the file
-            with open(today+
-            f"_laser_sweep_powersamples{str(self.power_meter.get_average())}"+
-            f"_pm_sensitivity_{str(self.power_meter.get_wavelength())}_"+
-            filename+".txt","w") as f:
+            savefile_name = today+f"_laser_sweep_powersamples{str(self.power_meter.get_average())}"+f"_pm_sensitivity_{str(int(self.power_meter.get_wavelength()*1000))}_"+filename+".txt"
+            with open(savefile_name,"w") as f:
 
                 #write the header
                 f.write("wavelength_nm ")
@@ -108,7 +106,7 @@ class ExperimentalSetUp:
         
         if verbose:
             if save:
-                print("Sweep completed, data saved under",today+"_laser_sweep_"+filename+".txt")
+                print("Sweep completed, data saved under",savefile_name)
             else:
                 print("Sweep completed")
         return power_readings
@@ -124,5 +122,5 @@ if __name__ == "__main__":
     setup = ExperimentalSetUp(laser, power_meter)
     
 
-    result = setup.perform_wavelength_sweep(1546.5, 1547.5, 11, filename = "test_3reps", reps = 5)
+    result = setup.perform_wavelength_sweep(1546.5, 1547.5, 2, filename = "", reps = 1)
     print(result)
