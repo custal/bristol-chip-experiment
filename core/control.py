@@ -6,6 +6,22 @@ from datetime import date
 import time
 today = str(date.today())
 
+def laser_control(func):
+    """ Decorator to be used on methods in ExperimentalSetup where the laser should be turned on. This decorator will
+    turn on the laser at the start of method execution then turn it off at the end. If an error occurs mid-execution
+    then the laser will be switched off before the error is raised """
+    def error_handler(*args, **kwargs):
+        try:
+            args[0].laser.set_state(True)
+            val = func(*args, **kwargs)
+        except Exception as e:
+            laser.set_state(False)
+            raise e
+        args[0].laser.set_state(False)
+        return val
+    return error_handler
+
+
 class ExperimentalSetUp:
     """ Class used to handle the experimental setup of a laser with a power meter """
     
@@ -14,8 +30,9 @@ class ExperimentalSetUp:
         self.laser = laser
         self.power_meter = power_meter
 
+    @laser_control
     def perform_wavelength_sweep(self, wavelength_start: float, wavelength_end: float, steps: int,
-    delay = 25, filename:str = "",save:bool = True, verbose:bool = True):
+    delay = 25, filename:str = "", save: bool = True, verbose: bool = True):
         """
         Performs a sweep over the given start/stop frequencies. Returns an array of dBm readings
         from the power meter saved as a binary file.
@@ -94,7 +111,5 @@ if __name__ == "__main__":
     power_meter = PowerMeterManager()
     setup = ExperimentalSetUp(laser, power_meter)
 
-    laser.set_state(True)
-    result = setup.perform_wavelength_sweep(1546.72, 1547.22, 6)
-    laser.set_state(False)
+    result = setup.perform_wavelength_sweep(1450, 1555, 16)
     print(result)

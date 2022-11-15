@@ -18,6 +18,7 @@ class MockInstrument:
         self.state = False
         self.wavelength = 1550
         self.power = 7.5
+        self.resolution = 0.01
 
     def set_frequency(self, frequency: float):
         self.wavelength = c/frequency
