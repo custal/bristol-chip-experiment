@@ -32,6 +32,7 @@ import pandas as pd
 # %%
 #Plotting the sweep of the QUANTIFI laser
 fname = r"../Data/2022-11-16_laser_sweep_powersamples100_pm_sensitivity_1550000_QUANTIFI_powermeter_characterisation.txt"
+# fname = r"../Data\16-11-2022_17-08_laser_sweep_powersamples_100_pm_sensitivity_1550_tunics_bare_wavelength_sweep.txt"
 data = pd.read_csv(fname,index_col = 0)
 data["mean_dbm"] = data.mean(axis = 1)
 data["variance"] = data.var(axis = 1)
@@ -42,6 +43,7 @@ data.head()
 data["Wavelength(nm)"] = data.index
 sns_plot = sns.relplot(data=data,x="Wavelength(nm)", y = "mean_dbm")
 fig = sns_plot.fig
+# fig.savefig("../Graphs/Tunics_laser_sweep_1550_sensitivity",dpi=600)
 fig.savefig("../Graphs/QUANTIFI_laser_sweep_1550_sensitivity",dpi=600)
 # %%
 data["variance"]
