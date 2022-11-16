@@ -121,7 +121,10 @@ if __name__ == "__main__":
     laser = QuantifiManager() #min 1527.605 max 1568.773
     power_meter = PowerMeterManager()
     setup = ExperimentalSetUp(laser, power_meter)
-    
+    start = 1531.3
+    stop = 1568.7
+    step = 375
+    print("Scan range:",np.linspace(start,stop,step)[:5],"...",np.linspace(start,stop,step)[-5:])
 
-    result = setup.perform_wavelength_sweep(1546.5, 1547.5, 2, filename = "", reps = 1)
+    result = setup.perform_wavelength_sweep(start, stop, step, filename = "QUANTIFI_powermeter_characterisation", reps = 10)
     print(result)
