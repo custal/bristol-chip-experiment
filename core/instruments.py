@@ -1,7 +1,7 @@
 """ This file is for functions and classes used to connect to the instruments """
 
 from pyvisa import ResourceManager
-from pyvisa.resources import TCPIPInstrument, USBInstrument
+from pyvisa.resources import TCPIPInstrument, USBInstrument, SerialInstrument
 from pyvisa.errors import VisaIOError
 import time
 import numpy as np
@@ -64,7 +64,7 @@ class QuantifiManager(InstrumentManager):
         Wrapper class for managing the Tunics Plus laser
         Tunics Plus laser SCPI commands can be found in the docs folder.
     """
-    def __init__(self, resource_name: str = 'TCPIP0::192.168.101.201::inst0::INSTR'):
+    def __init__(self, resource_name: str = 'TCPIP0::192.168.101.201::inst0::INSTR', power: float = 7.5):
         super().__init__(resource_name)
 
         if not isinstance(self.instrument, TCPIPInstrument):
@@ -80,7 +80,7 @@ class QuantifiManager(InstrumentManager):
         self.output = ":OUTP1"
         self.channel = ":CHAN1"
         
-        self.set_power(7.5) #default power is 10
+        self.set_power(power) #default power is 10
 
 
     @property
@@ -90,12 +90,6 @@ class QuantifiManager(InstrumentManager):
     @property
     def output_prefix(self):
         return self.output + self.channel
-
-    def get_min_wavelength(self):
-        return float(self._send_message(f"{self.source_prefix}:WAV? MIN")) / unit_conversion[self.wavelength_unit]
-
-    def get_max_wavelength(self):
-        return float(self._send_message(f"{self.source_prefix}:WAV? MAX")) / unit_conversion[self.wavelength_unit]
 
     def set_frequency(self, frequency: float):
         if frequency < (min_freq := self.get_frequency("MIN")):
@@ -212,36 +206,59 @@ class TunicsManager(InstrumentManager):
         Tunics Plus but the commands should be similar.
     """
 
-    def __init__(self, resource_name: str = 'TCPIP0::192.168.101.201::inst0::INSTR'):
+    def __init__(self, resource_name: str = 'ASRL4::INSTR', power: float = 0):
         super().__init__(resource_name)
 
-        if not isinstance(self.instrument, TCPIPInstrument):
-            raise TypeError(f"The instrument with name '{resource_name}' is not of type {TCPIPInstrument}.")
+        if not isinstance(self.instrument, SerialInstrument):
+            raise TypeError(f"The instrument with name '{resource_name}' is not of type {SerialInstrument}.")
 
         self.wavelength_unit = "NM"
-        self.frequency_unit = "THZ"
-        self.power_unit = "DBM"
+        self.frequency_unit = "GHZ"
+        self._power_unit = "DBM"
         self.resolution = 0.001  # WARNING: This is in nm and doesn't consider wavelength_unit
+        self.instrument.read_termination = '\r'
 
-        self.source = ":SOURCE1"
-        self.output = ":OUTP1"
-        self.channel = ":CHAN1"
-
-        self.set_power(7.5)  # default power is 10
-
-    @property
-    def source_prefix(self):
-        return self.source + self.channel
+        self.power_unit = self._power_unit
+        self.set_state(True)
+        self.set_power(power) # Laser must be on to set power
+        self.set_state(False)
 
     @property
-    def output_prefix(self):
-        return self.output + self.channel
+    def power_unit(self):
+        return self._power_unit
 
-    def get_min_wavelength(self):
-        return float(self._send_message(f"{self.source_prefix}:WAV? MIN")) / unit_conversion[self.wavelength_unit]
+    @power_unit.setter
+    def power_unit(self, unit: str):
+        unit = unit.upper()
+        if unit not in ("DBM", "MW"):
+            raise ValueError(f"Power unit '{unit}' must be either 'DBM' or 'MW'")
 
-    def get_max_wavelength(self):
-        return float(self._send_message(f"{self.source_prefix}:WAV? MAX")) / unit_conversion[self.wavelength_unit]
+        self._send_message(unit, read=False)
+        self._power_unit = unit
+
+    def _send_message(self, message: str, read: bool=True):
+        try:
+            val = self.instrument.query(message).upper().strip("> ")
+            if "=" in val:
+                # Assume message is of the form "F?" and return is of the form "> f="
+                val = val.strip(f"{message[0]}=")
+            self._check_error(val)
+            if read:
+                return val
+        except VisaIOError as e:
+            raise IOError(e)
+
+    def _check_error(self, error: str):
+        """ Tunics has two possible errors
+            COMMANDERROR
+            VALUEERROR
+        """
+        if error == "COMMANDERROR":
+            raise IOError("Command Error")
+        elif error == "VALUEERROR":
+            raise IOError("Value Error")
+        else:
+            return
 
     def set_frequency(self, frequency: float):
         if frequency < (min_freq := self.get_frequency("MIN")):
@@ -251,7 +268,7 @@ class TunicsManager(InstrumentManager):
             raise ValueError(f"Frequency '{frequency} {self.frequency_unit}' "
                              f"is above laser maximum '{max_freq} {self.frequency_unit}'")
 
-        self._send_message(f"{self.source_prefix}:FREQ {frequency} {self.frequency_unit}", read=False)
+        self._send_message(f"F={frequency}", read=False)
 
     def shift_frequency(self, frequency_shift: float):
         frequency = self.get_frequency()
@@ -261,14 +278,15 @@ class TunicsManager(InstrumentManager):
         """ param (str):
                         MIN: Return the minimum programmable value
                         MAX: Return the maximum programmable value
-                        DEF: Return the default value of frequency
-                        SET: Return the set value (default) of the frequency in the GRID
-                        ACT: Return the actual value of the SET frequency
-                        LOCK: Query whether the laser is currently at the SET frequency
-                        ALL: Returns all of the above parameters
-        ref manual pg. 51
+        Parameters hardcoded as Tunics-Plus does not return these values
         """
-        return float(self._send_message(f"{self.source_prefix}:FREQ? {param}")) / unit_conversion[self.frequency_unit]
+        if param == "MAX":
+            return 199728.5
+        elif param == "MIN":
+            return 182800.3
+        elif param == "":
+            return float(self._send_message(f"F? {param}"))
+        self._check_error("COMMAND ERROR")
 
     def set_wavelength(self, wavelength: float):
         if wavelength < (min_wav := self.get_wavelength("MIN")):
@@ -278,7 +296,7 @@ class TunicsManager(InstrumentManager):
             raise ValueError(f"Wavelength '{wavelength} {self.wavelength_unit}' "
                              f"is above laser maximum '{max_wav} {self.wavelength_unit}'")
 
-        self._send_message(f"{self.source_prefix}:WAV {wavelength} {self.wavelength_unit}", read=False)
+        self._send_message(f"L={wavelength}", read=False)
 
     def shift_wavelength(self, wavelength_shift: float):
         wavelength = self.get_wavelength()
@@ -288,25 +306,18 @@ class TunicsManager(InstrumentManager):
         """ param (str):
                         MIN: Return the minimum programmable value
                         MAX: Return the maximum programmable value
-                        DEF: Return the default value of wavelength
-                        SET: Return the set value (default) of the wavelength in the GRID
-                        ACT: Return the actual value of the SET wavelength
-                        LOCK: Query whether the laser is currently at the SET wavelength
-                        ALL: Returns all of the above parameters
-            ref manual pg. 51
+        Parameters hardcoded as Tunics-Plus does not return these values
         """
-        return float(self._send_message(f"{self.source_prefix}:WAV? {param}")) / unit_conversion[self.wavelength_unit]
+        if param == "MAX":
+            return 1640
+        elif param == "MIN":
+            return 1500
+        elif param == "":
+            return float(self._send_message(f"L?"))
+        self._check_error("COMMAND ERROR")
 
     def set_power(self, power: float):
-        if power < (min_power := self.get_power("MIN")):
-            raise ValueError(f"Power '{power} {self.power_unit}' "
-                             f"is below laser minimum '{min_power} {self.power_unit}'")
-        elif power > (max_power := self.get_power("MAX")):
-            raise ValueError(f"Power '{power} {self.power_unit}' "
-                             f"is above laser maximum '{max_power} {self.power_unit}'")
-
-        self._send_message(f"{self.source_prefix}:POW {power} {self.power_unit}", read=False)
-        self.defined_power = power
+        self._send_message(f"P={power}", read=False)
 
     def shift_power(self, power_shift: float):
         power = self.get_power()
@@ -316,21 +327,28 @@ class TunicsManager(InstrumentManager):
         """ param (str):
                         MIN: Return the minimum programmable value
                         MAX: Return the maximum programmable value
-                        DEF: Return the default value of power
-                        SET: Return the desired set value
-                        ACT: Return the current value (default)
-                        ALL: Returns all of the above parameters
-
-            ref manual pg. 50
+        Parameters hardcoded as Tunics-Plus does not return these values
         """
-        return float(self._send_message(f"{self.source_prefix}:POW? {param}"))
+        if param == "MAX":
+            return 7.1
+        elif param == "MIN":
+            return -6.88
+        elif param == "":
+            val = self._send_message(f"P?")
+            return -99.99 if val == "DISABLED" else float(val)
+        self._check_error("COMMAND ERROR")
 
     def set_state(self, state: bool):
-        self._send_message(f"{self.output_prefix}:STATE {'ON' if state else 'OFF'}", read=False)
+        self._send_message("ENABLE" if state else "DISABLE")
 
     def get_state(self):
-        state = self._send_message(f"{self.output_prefix}:STATE?")
-        return True if state == "ON" else False
+        val = self._send_message(f"P?")
+        return False if val == "DISABLED" else True
+
+    @property
+    def _identify(self):
+        """ Tunics-Plus does not recognise *IDN? so hard code it's name"""
+        return "Tunics-Plus, GNI Nettest The colors of WDM"
 
 
 class PowerMeterManager(InstrumentManager):
