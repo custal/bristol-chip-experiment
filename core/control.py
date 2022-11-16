@@ -1,6 +1,7 @@
 """ This file is for functions and classes used to control the instruments """
+import datetime
 
-from instruments import QuantifiManager, PowerMeterManager
+from core.instruments import QuantifiManager, PowerMeterManager
 import numpy as np
 from datetime import date
 import time
@@ -15,7 +16,7 @@ def laser_control(func):
             args[0].laser.set_state(True)
             val = func(*args, **kwargs)
         except Exception as e:
-            laser.set_state(False)
+            args[0].laser.set_state(False)
             raise e
         args[0].laser.set_state(False)
         return val
@@ -54,6 +55,7 @@ class ExperimentalSetUp:
         laser wavelength and power meter readings.
 
         """
+        start_time = datetime.datetime.now().strftime("%d-%m-%Y_%H-%M")
         power_readings = np.zeros((reps,steps))
         scan_range = np.linspace(wavelength_start, wavelength_end, steps)
 
@@ -72,13 +74,12 @@ class ExperimentalSetUp:
         for i, wavelength in enumerate(scan_range):
 
             self.laser.set_wavelength(wavelength)
-            time.sleep(5) # <20 is okay for Quantifi
+            time.sleep(1) # <20 is okay for Quantifi
             if self.laser.wait_steady_state() == True:
-                time.sleep(2) #wait another 2 seconds
                 for j in range(reps):
                     power_readings[j,i] = self.power_meter.read()
             else:
-                raise Exception(f"Laser has taken more than {self.laser.max_wait_time} to stabilise")
+                raise Exception(f"Laser has taken more than {self.laser.max_wait_time}s to stabilise")
 
             if verbose:
                 print("Current laser frequency:", wavelength)
@@ -87,7 +88,7 @@ class ExperimentalSetUp:
 
 
         if save: #save the file
-            savefile_name = today+f"_laser_sweep_powersamples{str(self.power_meter.get_average())}"+f"_pm_sensitivity_{str(int(self.power_meter.get_wavelength()*1000))}_"+filename+".txt"
+            savefile_name = start_time+f"_laser_sweep_powersamples_{str(self.power_meter.get_average())}_pm_sensitivity_{str(int(self.power_meter.get_wavelength()))}_"+filename+".txt"
             with open(savefile_name,"w") as f:
 
                 #write the header

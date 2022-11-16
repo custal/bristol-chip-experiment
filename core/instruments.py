@@ -6,7 +6,7 @@ from pyvisa.errors import VisaIOError
 import time
 import numpy as np
 
-from utils import frequency_to_wavelength, wavelength_to_frequency, unit_conversion
+from core.utils import frequency_to_wavelength, wavelength_to_frequency, unit_conversion
 
 rm = ResourceManager()
 
@@ -206,7 +206,7 @@ class TunicsManager(InstrumentManager):
         Tunics Plus but the commands should be similar.
     """
 
-    def __init__(self, resource_name: str = 'ASRL4::INSTR', power: float = 0):
+    def __init__(self, resource_name: str = 'ASRL4::INSTR', power: float = -6):
         super().__init__(resource_name)
 
         if not isinstance(self.instrument, SerialInstrument):
@@ -216,12 +216,26 @@ class TunicsManager(InstrumentManager):
         self.frequency_unit = "GHZ"
         self._power_unit = "DBM"
         self.resolution = 0.001  # WARNING: This is in nm and doesn't consider wavelength_unit
+        self.max_wait_time = 20
         self.instrument.read_termination = '\r'
+
+        # Empty the read register of anything from previous uses
+        i = 0
+        while True:
+            try:
+                self.instrument.read()
+            except VisaIOError as e:
+                break
+            i += 1
+            if i == 100:
+                raise TimeoutError("Could not empty the readout register on the Tunics laser after 100 reads")
 
         self.power_unit = self._power_unit
         self.set_state(True)
         self.set_power(power) # Laser must be on to set power
         self.set_state(False)
+        self.defined_power = power
+
 
     @property
     def power_unit(self):
@@ -259,6 +273,24 @@ class TunicsManager(InstrumentManager):
             raise IOError("Value Error")
         else:
             return
+
+    def check_steady_state(self, res=0):
+        return np.round(self.get_power(), res) == np.round(self.defined_power, res)
+
+    def wait_steady_state(self):
+        """
+        Checks if laser has reached steady state every 1 second by comparing the set and current
+        powers.
+        """
+        elapsed_time = 0
+        delay_time = 1
+        while elapsed_time < self.max_wait_time:
+            if self.check_steady_state():
+                return True
+            time.sleep(delay_time)
+            elapsed_time += delay_time
+
+        return False
 
     def set_frequency(self, frequency: float):
         if frequency < (min_freq := self.get_frequency("MIN")):
@@ -311,13 +343,21 @@ class TunicsManager(InstrumentManager):
         if param == "MAX":
             return 1640
         elif param == "MIN":
-            return 1500
+            return 1510 # The laser can go lower but then the maximum power drops below what should be possible
         elif param == "":
             return float(self._send_message(f"L?"))
         self._check_error("COMMAND ERROR")
 
     def set_power(self, power: float):
+        if power < (min_power := self.get_power("MIN")):
+            raise ValueError(f"Power '{power} {self.power_unit}' "
+                             f"is below laser minimum '{min_power} {self.power_unit}'")
+        elif power > (max_power := self.get_power("MAX")):
+            raise ValueError(f"Power '{power} {self.power_unit}' "
+                             f"is above laser maximum '{max_power} {self.power_unit}'")
+
         self._send_message(f"P={power}", read=False)
+        self.defined_power = power
 
     def shift_power(self, power_shift: float):
         power = self.get_power()
@@ -328,6 +368,9 @@ class TunicsManager(InstrumentManager):
                         MIN: Return the minimum programmable value
                         MAX: Return the maximum programmable value
         Parameters hardcoded as Tunics-Plus does not return these values
+
+        The tunics max power is dependent on the wavelength so this max is to be taken with a pinch of salt.
+        For consistent results work with a close to minimum power
         """
         if param == "MAX":
             return 7.1
