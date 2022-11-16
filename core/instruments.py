@@ -206,7 +206,7 @@ class TunicsManager(InstrumentManager):
         Tunics Plus but the commands should be similar.
     """
 
-    def __init__(self, resource_name: str = 'ASRL4::INSTR', power: float = -6):
+    def __init__(self, resource_name: str = 'ASRL4::INSTR', power: float = 0):
         super().__init__(resource_name)
 
         if not isinstance(self.instrument, SerialInstrument):
