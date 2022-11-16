@@ -33,7 +33,7 @@ class ExperimentalSetUp:
 
     @laser_control
     def perform_wavelength_sweep(self, wavelength_start: float, wavelength_end: float, steps: int,
-    filename:str = "", save: bool = True, verbose: bool = True, reps = 1):
+    filename: str = None, save: bool = True, verbose: bool = True, reps = 1):
         """
         Performs a sweep over the given start/stop frequencies. Returns an array of dBm readings
         from the power meter saved as a binary file.
@@ -74,7 +74,7 @@ class ExperimentalSetUp:
         for i, wavelength in enumerate(scan_range):
 
             self.laser.set_wavelength(wavelength)
-            time.sleep(1) # <20 is okay for Quantifi
+            # time.sleep(1) # <20 is okay for Quantifi
             if self.laser.wait_steady_state() == True:
                 for j in range(reps):
                     power_readings[j,i] = self.power_meter.read()
@@ -88,7 +88,8 @@ class ExperimentalSetUp:
 
 
         if save: #save the file
-            savefile_name = start_time+f"_laser_sweep_powersamples_{str(self.power_meter.get_average())}_pm_sensitivity_{str(int(self.power_meter.get_wavelength()))}_"+filename+".txt"
+            savefile_name = fr"../Data/{start_time}_laser_sweep_samples_{str(self.power_meter.get_average())}_pm_\
+            sensitivity_{str(int(self.power_meter.get_wavelength()))}{'_'+filename if filename else ''}.txt"
             with open(savefile_name,"w") as f:
 
                 #write the header
