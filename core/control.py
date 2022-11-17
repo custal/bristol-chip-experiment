@@ -5,6 +5,8 @@ from instruments import QuantifiManager, PowerMeterManager, TunicsManager
 import numpy as np
 from datetime import date
 today = str(date.today())
+import time
+import os
 
 def laser_control(func):
     """ Decorator to be used on methods in ExperimentalSetup where the laser should be turned on. This decorator will
@@ -32,7 +34,7 @@ class ExperimentalSetUp:
 
     @laser_control
     def perform_wavelength_sweep(self, wavelength_start: float, wavelength_end: float, res: float,
-    filename: str = None, save: bool = True, verbose: bool = True, reps = 1):
+    filename: str = None, save: bool = True, verbose: bool = True, reps = 1, model = "TUNICS"):
         """
         Performs a sweep over the given start/stop frequencies. Returns an array of dBm readings
         from the power meter saved as a binary file.
@@ -53,9 +55,14 @@ class ExperimentalSetUp:
         The text file contains a header line "wavelength_nm power_dbm" followed by lines of the
         laser wavelength and power meter readings.
 
+        Save file naming format:
+        {dd-mm-yyyy_hh_mm}_laser_sweep_
+        samples_{power meter averages over samples}_
+        sensitivity_{power meter wavelength setting}_
+        {laser; either TUNICS or QUANTIFI}_{start wavelength, 0dp}_{end wavelength, 0dp}_{steps}_
+        {filename}.txt
         """
         start_time = datetime.datetime.now().strftime("%d-%m-%Y_%H-%M")
-        # scan_range = np.linspace(wavelength_start, wavelength_end, steps)
         scan_range = np.arange(wavelength_start, wavelength_end+res,res)
         power_readings = np.zeros((reps,len(scan_range)))
 
@@ -88,7 +95,16 @@ class ExperimentalSetUp:
 
 
         if save: #save the file
-            savefile_name = fr"../Data/{start_time}_laser_sweep_samples_{str(self.power_meter.get_average())}_pm_sensitivity_{str(int(self.power_meter.get_wavelength()))}{'_'+filename if filename else ''}.txt"
+            save_dir = f"../Data/{datetime.datetime.now().strftime("%d-%m-%Y")}/"
+            savefile_name = fr"{save_dir}{start_time}_laser_sweep_samples_{str(self.power_meter.get_average())}"+\
+            fr"_sensitivity_{str(int(self.power_meter.get_wavelength()))}_"+\
+            fr"{model}_{round(wavelength_start)}_{round(wavelength_end)}_{len(scan_range)}{'_'+filename if filename else ''}.txt"
+            
+            if not os.path.exists(save_dir):
+                print("Today's directory not found. Creating new one...")
+                os.makedirs(save_dir)
+
+
             with open(savefile_name,"w") as f:
 
                 #write the header
