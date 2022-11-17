@@ -34,7 +34,7 @@ class ExperimentalSetUp:
 
     @laser_control
     def perform_wavelength_sweep(self, wavelength_start: float, wavelength_end: float, res: float,
-    filename: str = None, save: bool = True, verbose: bool = True, reps = 1, model = "TUNICS"):
+    filename: str = None, save: bool = True, verbose: bool = True, reps = 1):
         """
         Performs a sweep over the given start/stop frequencies. Returns an array of dBm readings
         from the power meter saved as a binary file.
@@ -95,10 +95,10 @@ class ExperimentalSetUp:
 
 
         if save: #save the file
-            save_dir = f"../Data/{datetime.datetime.now().strftime("%d-%m-%Y")}/"
+            save_dir = f"../Data/{datetime.datetime.now().strftime('%d-%m-%Y')}/"
             savefile_name = fr"{save_dir}{start_time}_laser_sweep_samples_{str(self.power_meter.get_average())}"+\
             fr"_sensitivity_{str(int(self.power_meter.get_wavelength()))}_"+\
-            fr"{model}_{round(wavelength_start)}_{round(wavelength_end)}_{len(scan_range)}{'_'+filename if filename else ''}.txt"
+            fr"{self.laser.name}_{round(wavelength_start)}_{round(wavelength_end)}_{len(scan_range)}{'_'+filename if filename else ''}.txt"
             
             if not os.path.exists(save_dir):
                 print("Today's directory not found. Creating new one...")

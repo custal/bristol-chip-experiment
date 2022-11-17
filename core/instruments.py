@@ -75,6 +75,7 @@ class QuantifiManager(InstrumentManager):
         self.power_unit = "DBM"
         self.resolution = 0.001 # WARNING: This is in nm and doesn't consider wavelength_unit
         self.max_wait_time = 25 #supposed to calibrate in <25s for quantifi laser
+        self.name = "QUANTIFI"
 
         self.source = ":SOURCE1"
         self.output = ":OUTP1"
@@ -217,6 +218,7 @@ class TunicsManager(InstrumentManager):
         self._power_unit = "DBM"
         self.resolution = 0.001  # WARNING: This is in nm and doesn't consider wavelength_unit
         self.max_wait_time = 20
+        self.name = "TUNICS"
         self.instrument.read_termination = '\r'
 
         # Empty the read register of anything from previous uses
