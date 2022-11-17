@@ -1,7 +1,7 @@
 """ This file is for functions and classes used to control the instruments """
 import datetime
 
-from core.instruments import QuantifiManager, PowerMeterManager
+from instruments import QuantifiManager, PowerMeterManager, TunicsManager
 import numpy as np
 from datetime import date
 import time
@@ -32,7 +32,7 @@ class ExperimentalSetUp:
         self.power_meter = power_meter
 
     @laser_control
-    def perform_wavelength_sweep(self, wavelength_start: float, wavelength_end: float, steps: int,
+    def perform_wavelength_sweep(self, wavelength_start: float, wavelength_end: float, res: float,
     filename: str = None, save: bool = True, verbose: bool = True, reps = 1):
         """
         Performs a sweep over the given start/stop frequencies. Returns an array of dBm readings
@@ -57,7 +57,8 @@ class ExperimentalSetUp:
         """
         start_time = datetime.datetime.now().strftime("%d-%m-%Y_%H-%M")
         power_readings = np.zeros((reps,steps))
-        scan_range = np.linspace(wavelength_start, wavelength_end, steps)
+        # scan_range = np.linspace(wavelength_start, wavelength_end, steps)
+        scan_range = np.arange(wavelength_start, wavelength_end+res,res)
 
         #add exceptions
         if scan_range[1]-scan_range[0] <= self.laser.resolution: #1pm laser resolution
@@ -119,7 +120,7 @@ class ExperimentalSetUp:
 if __name__ == "__main__":
     from utils import MockInstrument
 
-    laser = QuantifiManager() #min 1527.605 max 1568.773
+    laser = TunicsManager('ASRL5::INSTR') #min 1527.605 max 1568.773
     power_meter = PowerMeterManager()
     setup = ExperimentalSetUp(laser, power_meter)
     start = 1531.3
