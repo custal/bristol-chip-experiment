@@ -1,3 +1,0 @@
-wavelength_nm ,power_reading_0_dbm 
-1546.5, 7.4536891
-1547.5, 7.48275948
