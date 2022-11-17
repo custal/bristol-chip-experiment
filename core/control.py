@@ -1,7 +1,7 @@
 """ This file is for functions and classes used to control the instruments """
 import datetime
 
-from instruments import QuantifiManager, PowerMeterManager, TunicsManager
+from core.instruments import QuantifiManager, PowerMeterManager, TunicsManager
 import numpy as np
 from datetime import date
 today = str(date.today())
@@ -132,7 +132,7 @@ class ExperimentalSetUp:
 
 
 if __name__ == "__main__":
-    from utils import MockInstrument
+    from core.utils import MockInstrument
 
     laser = TunicsManager('ASRL5::INSTR') #min 1527.605 max 1568.773
     power_meter = PowerMeterManager()
