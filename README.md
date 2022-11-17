@@ -6,7 +6,9 @@ This project uses poetry to manage packages. You can install poetry here:
 https://python-poetry.org/
 
 If you are using an alternative package manager, such as conda, you can add all the packages in the 
-pyproject.toml file which are listed under tool.poetry.dependencies to your environment and the code should still run.
+pyproject.toml file which are listed under tool.poetry.dependencies to your environment. We then need to install this 
+package to your environment. Delete pyproject.toml and run `pip install -e .` while in the top level directory. Your
+code should now run.
 
 In order for pyvisa to work on your machine you will need to install NI-MAX. You will also need to configure it to 
 recognise the Quantifi laser. The following steps will show you how to do this.
