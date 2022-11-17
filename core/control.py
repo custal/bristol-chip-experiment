@@ -4,7 +4,6 @@ import datetime
 from instruments import QuantifiManager, PowerMeterManager, TunicsManager
 import numpy as np
 from datetime import date
-import time
 today = str(date.today())
 
 def laser_control(func):
@@ -41,7 +40,7 @@ class ExperimentalSetUp:
         Arguments:
         wavelength_start: starting wavelength (inclusive in sweep) of laser in nm
         wavelength_end: ending wavelength (inclusive in sweep) in nm
-        steps: no. of data points
+        res: resolution of scan
         save: if True, will save power_readings as a binary file
         filename: name of file to be saved
         delay: seconds to wait after setting the laser to a new wavelength before taking data from the meter
@@ -56,9 +55,9 @@ class ExperimentalSetUp:
 
         """
         start_time = datetime.datetime.now().strftime("%d-%m-%Y_%H-%M")
-        power_readings = np.zeros((reps,steps))
         # scan_range = np.linspace(wavelength_start, wavelength_end, steps)
         scan_range = np.arange(wavelength_start, wavelength_end+res,res)
+        power_readings = np.zeros((reps,len(scan_range)))
 
         #add exceptions
         if scan_range[1]-scan_range[0] <= self.laser.resolution: #1pm laser resolution
@@ -67,7 +66,7 @@ class ExperimentalSetUp:
         if verbose:
             print("-----Conducting laser sweep-----")
             print("Parameters:-----------")
-            print("Laser start/stop/steps:", wavelength_start, wavelength_end, steps)
+            print("Laser start/stop/res:", wavelength_start, wavelength_end, res)
             print("Reps:",reps)
             print(f"Power meter averaging over {self.power_meter.get_average()} samples")
             print(f"Power meter frequency set to {self.power_meter.get_wavelength()} nm")
@@ -89,8 +88,7 @@ class ExperimentalSetUp:
 
 
         if save: #save the file
-            savefile_name = fr"../Data/{start_time}_laser_sweep_samples_{str(self.power_meter.get_average())}_pm_\
-            sensitivity_{str(int(self.power_meter.get_wavelength()))}{'_'+filename if filename else ''}.txt"
+            savefile_name = fr"../Data/{start_time}_laser_sweep_samples_{str(self.power_meter.get_average())}_pm_sensitivity_{str(int(self.power_meter.get_wavelength()))}{'_'+filename if filename else ''}.txt"
             with open(savefile_name,"w") as f:
 
                 #write the header
@@ -100,7 +98,7 @@ class ExperimentalSetUp:
                 f.write("\n")
 
                 #write the power meter readings
-                for i in range(steps):
+                for i in range(len(scan_range)):
                     f.write(str(scan_range[i]))
                     for j in range(reps):
                         f.write(", "+str(power_readings[j,i]))
@@ -123,10 +121,12 @@ if __name__ == "__main__":
     laser = TunicsManager('ASRL5::INSTR') #min 1527.605 max 1568.773
     power_meter = PowerMeterManager()
     setup = ExperimentalSetUp(laser, power_meter)
-    start = 1531.3
-    stop = 1568.7
-    step = 375
-    print("Scan range:",np.linspace(start,stop,step)[:5],"...",np.linspace(start,stop,step)[-5:])
+    start = 1556.0
+    stop = 1558.0
+    res = 0.005
+    savename = "Tunics_WDM_1556_1558_sn_2020071009_sweep"
+    # savename = "test"
+    # print("Scan range:",np.arange(start, stop+res, res)[:5],"...",np.arange(start,stop+res,res)[-5:])
 
-    result = setup.perform_wavelength_sweep(start, stop, step, filename = "QUANTIFI_powermeter_characterisation", reps = 10)
+    result = setup.perform_wavelength_sweep(start, stop, res, filename = savename, reps = 10)
     print(result)
