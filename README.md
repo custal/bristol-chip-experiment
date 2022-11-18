@@ -38,7 +38,7 @@ rm=pyvisa.ResourceManager()
 rm.list_resources()
 ```
 	
-You should see the output ('ASRL3::INSTR',)
+You should see the output ('ASRLn::INSTR',)
 3. Even if the resource manager has picked up the device you may not be able to connect. Check you can connect to the laser by running ping <laser ip address> in the Windows CMD or by putting the IP address into a browser. If you cannot connect then you may not have installed the drivers correctly. You can get the drivers from https://www.quantifiphotonics.com/resources/drivers-software-and-manuals/matriq-resources/ . I installed the top option "CohesionOperator-3.00.10.zip".
    When you do this you will no longer be able to see the laser in the resource list.
 4. To connect to the Quantifi laser we need to make a TCPIP address for it. We do this by opening NI-MAX (installed in the first step)

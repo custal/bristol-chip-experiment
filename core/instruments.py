@@ -6,7 +6,7 @@ from pyvisa.errors import VisaIOError
 import time
 import numpy as np
 
-from core.utils import frequency_to_wavelength, wavelength_to_frequency, unit_conversion
+from core.utils import unit_conversion
 
 rm = ResourceManager()
 
