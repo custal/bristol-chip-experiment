@@ -3,6 +3,8 @@
 import numpy as np
 import seaborn as sns
 import pandas as pd
+from pathlib import Path
+
 def read_txt(filename: str, headers: bool = True):
     """
     Reads the .txt file into an array in preparation for data analysis.
@@ -16,11 +18,13 @@ def read_txt(filename: str, headers: bool = True):
     
     return data
 
-def plot_sweep(filename: str, data_dir: str = "../Data/", save_dir:str = "../Graphs/", save:bool = False):
+def plot_sweep(filename: str, data_dir: str = "Data", save_dir:str = "Graphs", save:bool = False):
     """
     Function to plot the laser sweeps. Get graph of mean power against wavelength
     """
-    path = data_dir+filename
+    root = Path(__file__).parents[1]
+    path = root/data_dir/filename
+    save_path = root/save_dir/(filename.split('.')[0]+".png")
     data = pd.read_csv(path, index_col = 0) #sets the wavelength_nm column as index
     data["mean_dbm"] = data.mean(axis = 1)
     data["variance"] = data.var(axis = 1)
@@ -30,6 +34,7 @@ def plot_sweep(filename: str, data_dir: str = "../Data/", save_dir:str = "../Gra
     fig = sns_plot.fig
 
     if save:
-        fig.savefig(fr"{save_dir+filename.split('.')[0]}.png",dpi=600)
+        print(fr"Saving figure to {save_path}")
+        fig.savefig(save_path, dpi=600)
 
 # %%
