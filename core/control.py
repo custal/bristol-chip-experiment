@@ -2,10 +2,9 @@
 import datetime
 
 from core.instruments import QuantifiManager, PowerMeterManager, TunicsManager
+from core.analysis import data_directory, plot_sweep
 import numpy as np
-from datetime import date
-today = str(date.today())
-import time
+
 import os
 
 def laser_control(func):
@@ -95,17 +94,19 @@ class ExperimentalSetUp:
 
 
         if save: #save the file
-            save_dir = f"../Data/{datetime.datetime.now().strftime('%d-%m-%Y')}/"
-            savefile_name = fr"{save_dir}{start_time}_laser_sweep_samples_{str(self.power_meter.get_average())}"+\
+            today_directory = datetime.datetime.now().strftime('%d-%m-%Y')
+            save_dir = data_directory/today_directory
+            savefile_name = fr"{start_time}_laser_sweep_samples_{str(self.power_meter.get_average())}"+\
             fr"_sensitivity_{str(int(self.power_meter.get_wavelength()))}_"+\
             fr"{self.laser.name}_{round(wavelength_start)}_{round(wavelength_end)}_{len(scan_range)}{'_'+filename if filename else ''}.txt"
-            
+            save_path = save_dir/savefile_name
+
             if not os.path.exists(save_dir):
                 print("Today's directory not found. Creating new one...")
                 os.makedirs(save_dir)
 
 
-            with open(savefile_name,"w") as f:
+            with open(save_path,"w") as f:
 
                 #write the header
                 f.write("wavelength_nm ")
@@ -120,10 +121,12 @@ class ExperimentalSetUp:
                         f.write(", "+str(power_readings[j,i]))
                     f.write("\n")
                 f.close()
+
+            plot_sweep(f"{today_directory}/{savefile_name}", True)
         
         if verbose:
             if save:
-                print("Sweep completed, data saved under",savefile_name)
+                print("Sweep completed, data saved under", savefile_name)
             else:
                 print("Sweep completed")
         return power_readings
@@ -134,17 +137,17 @@ class ExperimentalSetUp:
 if __name__ == "__main__":
     from core.utils import MockInstrument
 
-    laser = TunicsManager('ASRL5::INSTR') #min 1527.605 max 1568.773
+    laser = TunicsManager('ASRL4::INSTR') #min 1527.605 max 1568.773
     power_meter = PowerMeterManager()
     setup = ExperimentalSetUp(laser, power_meter)
     start = 1557.5
     stop = 1562.5
-    res = 0.001
+    res = 0.1
     start=1560
     stop=1560.3
     step = 0.5
     savename = "ring13_finer"
-    savename = "test"
+    # savename = "test"
     # print("Scan range:",np.arange(start, stop+res, res)[:5],"...",np.arange(start,stop+res,res)[-5:])
 
     result = setup.perform_wavelength_sweep(start, stop, res, filename = savename, reps = 10)
