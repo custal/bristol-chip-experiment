@@ -1,11 +1,12 @@
-#%%
+# %%
 """
 This script is for me to test random stuff I come across in the project.
 """
 import numpy as np
-#%%
+# %%
 
-def FSR_resonance(r:float, laser_wavelength:float = 1550, n:float = 3.48):
+
+def FSR_resonance(r: float, laser_wavelength: float = 1550, n: float = 3.48):
     """
     Function to calculate the free spectral range of the microring resonators
     on the chip
@@ -23,8 +24,10 @@ def FSR_resonance(r:float, laser_wavelength:float = 1550, n:float = 3.48):
     FSR = (laser_wavelength/10**9)**2/(n*L)
     return FSR*10**9
 
-#%%
-ring_radii=np.array([40,80,120,160,200,240,280])/2
+
+# %%
+ring_radii = np.array([40, 80, 120, 160, 200, 240, 280])/2
 DWDM_res = 0.8
 print(FSR_resonance(ring_radii))
-print(FSR_resonance(ring_radii)>DWDM_res) #only radii up to 120 can be detected using DWDM
+# only radii up to 120 can be detected using DWDM
+print(FSR_resonance(ring_radii) > DWDM_res)
