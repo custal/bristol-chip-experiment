@@ -137,11 +137,14 @@ if __name__ == "__main__":
     laser = TunicsManager('ASRL5::INSTR') #min 1527.605 max 1568.773
     power_meter = PowerMeterManager()
     setup = ExperimentalSetUp(laser, power_meter)
-    start = 1556.0
-    stop = 1558.0
-    res = 0.005
-    savename = "Tunics_WDM_1556_1558_sn_2020071009_sweep"
-    # savename = "test"
+    start = 1557.5
+    stop = 1562.5
+    res = 0.001
+    start=1560
+    stop=1560.3
+    step = 0.5
+    savename = "ring13_finer"
+    savename = "test"
     # print("Scan range:",np.arange(start, stop+res, res)[:5],"...",np.arange(start,stop+res,res)[-5:])
 
     result = setup.perform_wavelength_sweep(start, stop, res, filename = savename, reps = 10)
