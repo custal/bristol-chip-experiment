@@ -24,7 +24,7 @@ def read_txt(filename: str, headers: bool = True):
     return data
 
 
-def plot_sweep(fname: str, save: bool = True):
+def plot_sweep(fname: str, title: str = "", save: bool = True):
     """
     Function to plot the laser sweeps. Get graph of mean power against wavelength
     """
@@ -36,12 +36,15 @@ def plot_sweep(fname: str, save: bool = True):
     data["variance"] = data.var(axis = 1)
     data["std"]=np.sqrt(data["variance"])
     data["Wavelength(nm)"] = data.index
-    sns_plot = sns.relplot(data=data, x="Wavelength(nm)", y="mean_dbm")
-    fig = sns_plot.fig
+    sns_plot = sns.relplot(data=data, x="Wavelength(nm)", y="mean_dbm", s=5)
+    sns_plot.set_axis_labels("Wavelength (nm)", "Power (dBm)")
+    if title:
+        sns_plot.set(title=title)
 
+    fig = sns_plot.fig
     if save:
         print(fr"Saving figure to {save_path}")
-        fig.savefig(save_path, dpi=600)
+        fig.savefig(save_path, dpi=600,bbox_inches='tight')
 
 
 # %%
