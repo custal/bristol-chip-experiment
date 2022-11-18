@@ -9,6 +9,7 @@ import numpy as np
 
 import os
 
+
 def laser_control(func):
     """ Decorator to be used on methods in ExperimentalSetup where the laser should be turned on. This decorator will
     turn on the laser at the start of method execution then turn it off at the end. If an error occurs mid-execution
@@ -104,7 +105,8 @@ class ExperimentalSetUp:
             savefile_name = fr"{start_time}_laser_sweep_samples_{str(self.power_meter.get_average())}" +\
                 fr"_sensitivity_{str(int(self.power_meter.get_wavelength()))}_" +\
                 fr"{self.laser.name}_{round(wavelength_start)}_{round(wavelength_end)}_{len(scan_range)}{'_'+filename if filename else ''}.txt"
-save_path = save_dir/savefile_name
+            save_path = save_dir/savefile_name
+
             if not os.path.exists(save_dir):
                 print("Today's directory not found. Creating new one...")
                 os.makedirs(save_dir)
@@ -125,8 +127,7 @@ save_path = save_dir/savefile_name
                     f.write("\n")
                 f.close()
 
-            plot_sweep(f"{today_directory}/{savefile_name}", True)
-
+            plot_sweep(f"{today_directory}/{savefile_name}", "" if filename is None else filename, True)
         if verbose:
             if save:
                 print("Sweep completed, data saved under", savefile_name)
