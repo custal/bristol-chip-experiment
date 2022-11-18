@@ -9,6 +9,7 @@ import numpy as np
 
 import os
 
+
 def laser_control(func):
     """ Decorator to be used on methods in ExperimentalSetup where the laser should be turned on. This decorator will
     turn on the laser at the start of method execution then turn it off at the end. If an error occurs mid-execution
@@ -35,7 +36,7 @@ class ExperimentalSetUp:
 
     @laser_control
     def perform_wavelength_sweep(self, wavelength_start: float, wavelength_end: float, res: float,
-                                 filename: str = None, save: bool = True, verbose: bool = True, reps=1):
+                                 filename: str = None, save: bool = True, verbose: bool = True, reps=1, title: str = ""):
         """
         Performs a sweep over the given start/stop frequencies. Returns an array of dBm readings
         from the power meter saved as a binary file.
@@ -98,22 +99,21 @@ class ExperimentalSetUp:
                 print("Power meter reading:", power_readings[:, i])
                 print("----------------------")
 
-
-        if save: #save the file
+        if save:  # save the file
             today_directory = datetime.datetime.now().strftime('%d-%m-%Y')
             save_dir = data_directory/today_directory
-            savefile_name = fr"{start_time}_laser_sweep_samples_{str(self.power_meter.get_average())}"+\
-            fr"_sensitivity_{str(int(self.power_meter.get_wavelength()))}_"+\
-            fr"{self.laser.name}_{round(wavelength_start)}_{round(wavelength_end)}_{len(scan_range)}{'_'+filename if filename else ''}.txt"
+            savefile_name = fr"{start_time}_laser_sweep_samples_{str(self.power_meter.get_average())}" +\
+                fr"_sensitivity_{str(int(self.power_meter.get_wavelength()))}_" +\
+                fr"{self.laser.name}_{round(wavelength_start)}_{round(wavelength_end)}_{len(scan_range)}{'_'+filename if filename else ''}.txt"
             save_path = save_dir/savefile_name
 
             if not os.path.exists(save_dir):
                 print("Today's directory not found. Creating new one...")
                 os.makedirs(save_dir)
 
-            with open(save_path,"w") as f:
+            with open(save_path, "w") as f:
 
-                #write the header
+                # write the header
                 f.write("wavelength_nm ")
                 for j in range(reps):
                     f.write(f",power_reading_{str(j)}_dbm ")
@@ -127,8 +127,8 @@ class ExperimentalSetUp:
                     f.write("\n")
                 f.close()
 
-            plot_sweep(f"{today_directory}/{savefile_name}", True)
-        
+            plot_sweep(f"{today_directory}/{savefile_name}", True, title)
+
         if verbose:
             if save:
                 print("Sweep completed, data saved under", savefile_name)
@@ -140,14 +140,14 @@ class ExperimentalSetUp:
 if __name__ == "__main__":
     from core.utils import MockInstrument
 
-    laser = TunicsManager('ASRL4::INSTR') #min 1527.605 max 1568.773
+    laser = TunicsManager('ASRL4::INSTR')  # min 1527.605 max 1568.773
     power_meter = PowerMeterManager()
     setup = ExperimentalSetUp(laser, power_meter)
     start = 1557.5
     stop = 1562.5
     res = 0.1
-    start=1560
-    stop=1560.3
+    start = 1560
+    stop = 1560.3
     step = 0.5
     savename = "ring13_finer"
     # savename = "test"

@@ -25,7 +25,7 @@ def read_txt(filename: str, headers: bool = True):
     return data
 
 
-def plot_sweep(fname: str, save: bool = True, xticks: int = 1, title: str = ""):
+def plot_sweep(fname: str, save: bool = True, title: str = ""):
     """
     Function to plot the laser sweeps. Get graph of mean power against wavelength
     """
