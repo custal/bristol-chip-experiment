@@ -20,7 +20,8 @@ def read_txt(filename: str, headers: bool = True):
     return data
 
 
-def plot_sweep(filename: str, data_dir: str = "Data", save_dir: str = "Graphs", save: bool = False):
+def plot_sweep(filename: str, data_dir: str = "Data", save_dir: str = "Graphs", save: bool = False,
+               xticks: int = 1, title: str = ""):
     """
     Function to plot the laser sweeps. Get graph of mean power against wavelength
     """
@@ -29,18 +30,22 @@ def plot_sweep(filename: str, data_dir: str = "Data", save_dir: str = "Graphs", 
     path = root/data_dir/filename
     print("Path:", path)
     save_path = root/save_dir/(filename.split('.')[0]+".png")
+
     # sets the wavelength_nm column as index
     data = pd.read_csv(path, index_col=0)
     data["mean_dbm"] = data.mean(axis=1)
     data["variance"] = data.var(axis=1)
     data["std"] = np.sqrt(data["variance"])
     data["Wavelength(nm)"] = data.index
-    sns_plot = sns.relplot(data=data, x="Wavelength(nm)", y="mean_dbm")
-    fig = sns_plot.fig
+    sns_plot = sns.relplot(data=data, x="Wavelength(nm)", y="mean_dbm", s=5)
+    sns_plot.set_axis_labels("Wavelength (nm)", "Power (dBm)")
+    if title:
+        sns_plot.set(title=title)
 
+    fig = sns_plot.fig
     if save:
         print(fr"Saving figure to {save_path}")
-        fig.savefig(save_path, dpi=600)
+        fig.savefig(save_path, dpi=600,bbox_inches='tight')
 
 
 # %%
