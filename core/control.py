@@ -6,6 +6,7 @@ import datetime
 from core.instruments import QuantifiManager, PowerMeterManager, TunicsManager
 from core.analysis import data_directory, plot_sweep
 import numpy as np
+from scipy.signal import find_peaks
 
 import os
 
@@ -35,7 +36,7 @@ class ExperimentalSetUp:
         self.power_meter = power_meter
 
     @laser_control
-    def perform_wavelength_sweep(self, wavelength_start: float, wavelength_end: float, res: float,
+    def perform_wavelength_sweep(self, wavelength_start: float, wavelength_end: float, res: float, graph: bool = True,
                                  filename: str = None, save: bool = True, verbose: bool = True, reps=1):
         """
         Performs a sweep over the given start/stop frequencies. Returns an array of dBm readings
@@ -126,8 +127,9 @@ class ExperimentalSetUp:
                         f.write(", "+str(power_readings[j, i]))
                     f.write("\n")
                 f.close()
-
-            plot_sweep(f"{today_directory}/{savefile_name}", "" if filename is None else filename, True)
+            if graph:
+                plot_sweep(f"{today_directory}/{savefile_name}",
+                           "" if filename is None else filename, True)
         if verbose:
             if save:
                 print("Sweep completed, data saved under", savefile_name)
@@ -135,23 +137,117 @@ class ExperimentalSetUp:
                 print("Sweep completed")
         return power_readings
 
+    def resonance_finding(self, resonance_rough, width: float = 0.15, graph: bool = True, res: float = 0.002,
+                          filename: str = None, reps: int = 10, verbose: bool = True):
+        """
+        Given a list of points that resonances are roughly supposed to be, do a scan to get the actual resonance.
+        Saves the data by default.
+
+        Arguments:
+        resonance_rough: list of points where the resonances occur. Obtain from a coarse scan. Try to centre
+        width: float in nm, determines the scan range around the points that we will do. Default 0.15 from past data
+        graph: bool, if True, plot final graph
+        verbose: bool, if True, prints data as it is collected
+        reps: no. of data readings
+        """
+        start_time = datetime.datetime.now().strftime("%d-%m-%Y_%H-%M")
+        today_directory = datetime.datetime.now().strftime('%d-%m-%Y')
+        save_dir = data_directory/today_directory
+        savefile_name = fr"{start_time}_resonance_finding_samples_{str(self.power_meter.get_average())}" +\
+            fr"_sensitivity_{str(int(self.power_meter.get_wavelength()))}_" +\
+            fr"{self.laser.name}_{str(len(resonance_rough))}{'_'+filename if filename else ''}.txt"
+        save_path = save_dir/savefile_name
+
+        if not os.path.exists(save_dir):
+            print("Today's directory not found. Creating new one...")
+            os.makedirs(save_dir)
+
+        with open(save_path, "w") as f:
+
+            # write the header
+            f.write("wavelength_nm ")
+            for j in range(reps):
+                f.write(f",power_reading_{str(j)}_dbm ")
+            f.write("\n")
+
+            for i, wavelength in enumerate(resonance_rough):
+                curr_wavelength_scan = np.arange(
+                    wavelength-width, wavelength+width+res, res)
+
+                for j, curr_wavelength in enumerate(curr_wavelength_scan):
+                    try:
+                        self.laser.set_wavelength(curr_wavelength)
+                        f.write(str(curr_wavelength))
+                        if self.laser.wait_steady_state() == True:
+                            readings = []
+                            for k in range(reps):
+                                curr_reading = self.power_meter.read()
+                                f.write(", "+str(curr_reading))
+                                readings.append(curr_reading)
+                            f.write("\n")
+                            if verbose:
+                                print(
+                                    f"Resonance {i} Frequency {curr_wavelength}")
+                                print("Power meter reading:", readings)
+                                print("----------------------")
+                        else:
+                            raise Exception(
+                                f"Laser has taken more than {self.laser.max_wait_time}s to stabilise")
+                    except:
+                        print(
+                            f"Sweep failed at {str(curr_wavelength)}nm sweep for resonance {str(i)}")
+                        f.close()
+            if graph:
+                plot_sweep(f"{today_directory}/{savefile_name}",
+                           "" if filename is None else filename, True)
+        print("Sweep completed, data saved under", savefile_name)
+        return True
+
+    def get_minima(self, coarse_power, coarse_wavelength, width: float = 0.3, thr: float = 3):
+        """
+        Function to return the minima of a coarse ring sweep
+
+        Arguments:
+        coarse_power: array of power readings from coarse scan
+        coarse_wavelength: wavelength from coarse scan.
+        width: bin size of the resonances. Set to 0.3 to exclude any minima from the same resonance
+
+        Returns:
+        resonances: list of wavelengths where resonances occur. To be fed into resonance_finding function
+        minima: indices of wavelength array where resonances occur.
+        """
+
+        mean_power = -1*np.array([np.mean(coarse_power[:, i])
+                                  for i in range(len(coarse_wavelength))])
+        minima, _ = find_peaks(mean_power, height=0, distance=width)
+        resonances = coarse_wavelength[minima]
+
+        return minima, resonances
+
 
 if __name__ == "__main__":
     from core.utils import MockInstrument
 
-    laser = TunicsManager('ASRL4::INSTR')  # min 1527.605 max 1568.773
+    laser = TunicsManager('ASRL6::INSTR')  # min 1527.605 max 1568.773
     power_meter = PowerMeterManager()
     setup = ExperimentalSetUp(laser, power_meter)
-    start = 1557.5
-    stop = 1562.5
-    res = 0.1
-    start = 1560
-    stop = 1560.3
-    step = 0.5
-    savename = "ring13_finer"
+    start = 1539
+    stop = 1571
+    res = 0.002
+
+    savename = "ring_14_fine_scan"
     # savename = "test"
     # print("Scan range:",np.arange(start, stop+res, res)[:5],"...",np.arange(start,stop+res,res)[-5:])
 
     result = setup.perform_wavelength_sweep(
         start, stop, res, filename=savename, reps=10)
-    print(result)
+
+    # example use of resonance finding code
+    savename = "test_resonance_finding"
+    coarse_start = 1539
+    coarse_stop = 1571
+    coarse_wavelengths = np.arange(coarse_start, coarse_stop, 0.02)
+    coarse_power_readings = setup.perform_wavelength_sweep(
+        coarse_start, coarse_stop, 0.02, filename="coarse_ring_test_sweep", reps=10)
+    minima, resonances = setup.get_minima(coarse_power_readings)
+    setup.resonance_finding(resonances)

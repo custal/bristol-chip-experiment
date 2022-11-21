@@ -10,6 +10,7 @@ from typing import Union
 root = Path(__file__).parents[1]
 data_directory = root/"Data"
 
+
 def read_txt(filename: str, headers: bool = True):
     """
     Reads the .txt file into an array in preparation for data analysis.
@@ -30,11 +31,12 @@ def plot_sweep(fname: str, title: str = "", save: bool = True):
     """
     path = data_directory/fname
     save_path = data_directory/(fname.split('.')[0]+".png")
-    data = pd.read_csv(path, index_col = 0) #sets the wavelength_nm column as index
+    # sets the wavelength_nm column as index
+    data = pd.read_csv(path, index_col=0)
 
-    data["mean_dbm"] = data.mean(axis = 1)
-    data["variance"] = data.var(axis = 1)
-    data["std"]=np.sqrt(data["variance"])
+    data["mean_dbm"] = data.mean(axis=1)
+    data["variance"] = data.var(axis=1)
+    data["std"] = np.sqrt(data["variance"])
     data["Wavelength(nm)"] = data.index
     sns_plot = sns.relplot(data=data, x="Wavelength(nm)", y="mean_dbm", s=5)
     sns_plot.set_axis_labels("Wavelength (nm)", "Power (dBm)")
@@ -44,7 +46,6 @@ def plot_sweep(fname: str, title: str = "", save: bool = True):
     fig = sns_plot.fig
     if save:
         print(fr"Saving figure to {save_path}")
-        fig.savefig(save_path, dpi=600,bbox_inches='tight')
-
+        fig.savefig(save_path, dpi=600, bbox_inches='tight')
 
 # %%
