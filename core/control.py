@@ -137,7 +137,8 @@ class ExperimentalSetUp:
                 print("Sweep completed")
         return power_readings
 
-    def resonance_finding(self, resonance_rough, width: float = 0.15, graph: bool = True, res: float = 0.002,
+    @laser_control
+    def resonance_finding(self, resonance_rough, width: float = 0.12, graph: bool = True, res: float = 0.002,
                           filename: str = None, reps: int = 10, verbose: bool = True):
         """
         Given a list of points that resonances are roughly supposed to be, do a scan to get the actual resonance.
@@ -187,7 +188,7 @@ class ExperimentalSetUp:
                             f.write("\n")
                             if verbose:
                                 print(
-                                    f"Resonance {i} Frequency {curr_wavelength}")
+                                    f"Resonance {i+1} of {len(resonance_rough)} Frequency {curr_wavelength}")
                                 print("Power meter reading:", readings)
                                 print("----------------------")
                         else:
@@ -203,7 +204,7 @@ class ExperimentalSetUp:
         print("Sweep completed, data saved under", savefile_name)
         return True
 
-    def get_minima(self, coarse_power, coarse_wavelength, width: float = 0.3, thr: float = 3):
+    def get_minima(self, coarse_power, coarse_wavelength, width: float = 15, thr: float = 3):
         """
         Function to return the minima of a coarse ring sweep
 
@@ -219,8 +220,10 @@ class ExperimentalSetUp:
 
         mean_power = -1*np.array([np.mean(coarse_power[:, i])
                                   for i in range(len(coarse_wavelength))])
-        minima, _ = find_peaks(mean_power, height=0, distance=width)
+        minima, _ = find_peaks(mean_power, height=0,
+                               distance=width, threshold=2)
         resonances = coarse_wavelength[minima]
+        print(f"Resonances occuring at {resonances} nm")
 
         return minima, resonances
 
@@ -235,19 +238,21 @@ if __name__ == "__main__":
     stop = 1571
     res = 0.002
 
-    savename = "ring_14_fine_scan"
+    savename = "ring_10_fine_scan"
     # savename = "test"
     # print("Scan range:",np.arange(start, stop+res, res)[:5],"...",np.arange(start,stop+res,res)[-5:])
 
-    result = setup.perform_wavelength_sweep(
-        start, stop, res, filename=savename, reps=10)
+    # result = setup.perform_wavelength_sweep(
+    #     start, stop, res, filename=savename, reps=10)
 
     # example use of resonance finding code
-    savename = "test_resonance_finding"
+    # savename = "test_resonance_finding"
     coarse_start = 1539
     coarse_stop = 1571
     coarse_wavelengths = np.arange(coarse_start, coarse_stop, 0.02)
     coarse_power_readings = setup.perform_wavelength_sweep(
-        coarse_start, coarse_stop, 0.02, filename="coarse_ring_test_sweep", reps=10)
-    minima, resonances = setup.get_minima(coarse_power_readings)
+        coarse_start, coarse_stop, 0.02, filename="coarse_ring_10_sweep", reps=10)
+
+    minima, resonances = setup.get_minima(
+        coarse_power_readings, coarse_wavelengths, width=15)
     setup.resonance_finding(resonances)
