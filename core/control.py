@@ -19,7 +19,7 @@ def laser_control(func):
         try:
             args[0].laser.set_state(True)
             val = func(*args, **kwargs)
-        except Exception as e:
+        except (Exception, KeyboardInterrupt) as e:
             args[0].laser.set_state(False)
             raise e
         args[0].laser.set_state(False)
@@ -71,7 +71,7 @@ class ExperimentalSetUp:
 
         # add exceptions
         if scan_range[1]-scan_range[0] <= self.laser.resolution:  # 1pm laser resolution
-            raise Exception(
+            raise ValueError(
                 f"Wavelength increase of {scan_range[1]-scan_range[0]} nm is below laser resolution")
 
         if verbose:
@@ -92,7 +92,7 @@ class ExperimentalSetUp:
                 for j in range(reps):
                     power_readings[j, i] = self.power_meter.read()
             else:
-                raise Exception(
+                raise TimeoutError(
                     f"Laser has taken more than {self.laser.max_wait_time}s to stabilise")
 
             if verbose:
