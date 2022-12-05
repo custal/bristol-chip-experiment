@@ -46,8 +46,8 @@ def invert_FSR_resonances(FSR: float, laser_wavelength: float = 1550, n: float =
 
     '''
 
-    L = (laser_wavelength/10**9)**2/(n*FSR)
-    d = L/np.pi
+    L = (laser_wavelength/10**9)**2*10**9/(n*FSR)
+    d = L/np.pi*10**6
 
     return d
 
