@@ -4,9 +4,9 @@ import time
 import datetime
 
 from core.instruments import QuantifiManager, PowerMeterManager, TunicsManager
-from core.analysis import data_directory, plot_sweep
+from core.analysis import data_directory, plot_sweep, get_minima
 import numpy as np
-from scipy.signal import find_peaks
+
 
 import os
 
@@ -138,7 +138,7 @@ class ExperimentalSetUp:
         return power_readings
 
     @laser_control
-    def resonance_finding(self, resonance_rough, width: float = 0.12, graph: bool = True, res: float = 0.002,
+    def resonance_finding(self, resonance_rough, width: float = 0.15, graph: bool = True, res: float = 0.001,
                           filename: str = None, reps: int = 10, verbose: bool = True):
         """
         Given a list of points that resonances are roughly supposed to be, do a scan to get the actual resonance.
@@ -204,29 +204,6 @@ class ExperimentalSetUp:
         print("Sweep completed, data saved under", savefile_name)
         return True
 
-    def get_minima(self, coarse_power, coarse_wavelength, width: float = 15, thr: float = 3):
-        """
-        Function to return the minima of a coarse ring sweep
-
-        Arguments:
-        coarse_power: array of power readings from coarse scan
-        coarse_wavelength: wavelength from coarse scan.
-        width: bin size of the resonances. Set to 0.3 to exclude any minima from the same resonance
-
-        Returns:
-        resonances: list of wavelengths where resonances occur. To be fed into resonance_finding function
-        minima: indices of wavelength array where resonances occur.
-        """
-
-        mean_power = -1*np.array([np.mean(coarse_power[:, i])
-                                  for i in range(len(coarse_wavelength))])
-        minima, _ = find_peaks(mean_power, height=0,
-                               distance=width, threshold=2)
-        resonances = coarse_wavelength[minima]
-        print(f"Resonances occuring at {resonances} nm")
-
-        return minima, resonances
-
 
 if __name__ == "__main__":
     from core.utils import MockInstrument
@@ -249,10 +226,11 @@ if __name__ == "__main__":
     # savename = "test_resonance_finding"
     coarse_start = 1539
     coarse_stop = 1571
-    coarse_wavelengths = np.arange(coarse_start, coarse_stop, 0.02)
+    res = 0.1
+    coarse_wavelengths = np.arange(coarse_start, coarse_stop, res)
     coarse_power_readings = setup.perform_wavelength_sweep(
-        coarse_start, coarse_stop, 0.02, filename="coarse_ring_10_sweep", reps=10)
+        coarse_start, coarse_stop, res, filename="TAILAI_loopback_66", reps=10)
 
-    minima, resonances = setup.get_minima(
-        coarse_power_readings, coarse_wavelengths, width=15)
-    setup.resonance_finding(resonances)
+    # minima, resonances = setup.get_minima(
+    #     coarse_power_readings, coarse_wavelengths, width=15)
+    # setup.resonance_finding(resonances)
