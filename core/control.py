@@ -170,15 +170,15 @@ class ExperimentalSetUp:
 if __name__ == "__main__":
     from core.utils import MockInstrument
 
-    laser = MockInstrument()  # min 1527.605 max 1568.773
-    power_meter = MockInstrument()
+    laser = TunicsManager()  # min 1527.605 max 1568.773
+    power_meter = PowerMeterManager()
     setup = ExperimentalSetUp(laser, power_meter)
 
-    coarse_start = 1546.36
-    coarse_stop = 1557.3
-    res = 0.1
-    coarse_wavelengths = np.arange(coarse_start, coarse_stop, res)
+    # coarse_start = 1546.36
+    # coarse_stop = 1557.3
+    # res = 0.1
+    # coarse_wavelengths = np.arange(coarse_start, coarse_stop, res)
     coarse_power_readings = setup.perform_wavelength_sweep(
-        coarse_start, coarse_stop, res, filename="TAILAI_loopback_66", reps=10)
+        1550.5, 1555.2, 0.01, filename="Angela_ring_9_calibration", reps=10)
 
-    setup.resonance_finding([1552.8, 1555.8], width=0.04, res = 0.002)
+    # setup.resonance_finding([1550.6, 1552.8, 1555], width=0.3, res=0.005)
