@@ -6,6 +6,7 @@ from core.analysis import data_directory, plot_sweep
 from core.utils import open_time_stamped_file
 import numpy as np
 
+
 def laser_control(func):
     """ Decorator to be used on methods in ExperimentalSetup where the laser should be turned on. This decorator will
     turn on the laser at the start of method execution then turn it off at the end. If an error occurs mid-execution
@@ -146,7 +147,8 @@ class ExperimentalSetUp:
             f.write("\n")
 
             for i, wavelength in enumerate(resonance_rough):
-                scan_range = np.arange(wavelength-width, wavelength+width+res, res)
+                scan_range = np.arange(
+                    wavelength-width, wavelength+width+res, res)
                 power_readings = self.perform_wavelength_sweep(wavelength-width, wavelength+width+res, res, graph=False,
                                                                save=False, reps=reps)
                 if save:
@@ -173,12 +175,27 @@ if __name__ == "__main__":
     laser = TunicsManager()  # min 1527.605 max 1568.773
     power_meter = PowerMeterManager()
     setup = ExperimentalSetUp(laser, power_meter)
+    start = 1549
+    stop = 1551
+    res = 0.01
 
-    # coarse_start = 1546.36
-    # coarse_stop = 1557.3
+    # savename = "angela_ring9_resonance_scan"
+    # savename = "test"
+    # print("Scan range:",np.arange(start, stop+res, res)[:5],"...",np.arange(start,stop+res,res)[-5:])
+
+    # result = setup.perform_wavelength_sweep(
+    #     start, stop, res, filename=savename, reps=10)
+
+    # # example use of resonance finding code
+    # # savename = "test_resonance_finding"
+    # coarse_start = 1539
+    # coarse_stop = 1571
     # res = 0.1
     # coarse_wavelengths = np.arange(coarse_start, coarse_stop, res)
-    coarse_power_readings = setup.perform_wavelength_sweep(
-        1550.5, 1555.2, 0.01, filename="Angela_ring_9_calibration", reps=10)
+    # coarse_power_readings = setup.perform_wavelength_sweep(
+    #     coarse_start, coarse_stop, res, filename="TAILAI_loopback_66", reps=10)
 
-    # setup.resonance_finding([1550.6, 1552.8, 1555], width=0.3, res=0.005)
+    # minima, resonances = setup.get_minima(
+    #     coarse_power_readings, coarse_wavelengths, width=15)
+    resonances = [1550.6, 1552.8, 1555]
+    setup.resonance_finding(resonances, width=0.3, res=0.005)

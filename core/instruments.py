@@ -10,13 +10,14 @@ from core.utils import unit_conversion
 
 rm = ResourceManager()
 
+
 class InstrumentManager:
     """ Wrapper class for managing instruments """
 
     def __init__(self, resource_name: str):
         self.instrument = rm.open_resource(resource_name)
 
-    def _send_message(self, message: str, read: bool=True):
+    def _send_message(self, message: str, read: bool = True):
         try:
             if read:
                 return self.instrument.query(message).strip("\n")
@@ -64,25 +65,26 @@ class QuantifiManager(InstrumentManager):
         Wrapper class for managing the Tunics Plus laser
         Tunics Plus laser SCPI commands can be found in the docs folder.
     """
+
     def __init__(self, resource_name: str = 'TCPIP0::192.168.101.201::inst0::INSTR', power: float = 7.5):
         super().__init__(resource_name)
 
         if not isinstance(self.instrument, TCPIPInstrument):
-            raise TypeError(f"The instrument with name '{resource_name}' is not of type {TCPIPInstrument}.")
+            raise TypeError(
+                f"The instrument with name '{resource_name}' is not of type {TCPIPInstrument}.")
 
         self.wavelength_unit = "NM"
         self.frequency_unit = "THZ"
         self.power_unit = "DBM"
-        self.resolution = 0.001 # WARNING: This is in nm and doesn't consider wavelength_unit
-        self.max_wait_time = 25 #supposed to calibrate in <25s for quantifi laser
+        self.resolution = 0.001  # WARNING: This is in nm and doesn't consider wavelength_unit
+        self.max_wait_time = 25  # supposed to calibrate in <25s for quantifi laser
         self.name = "QUANTIFI"
 
         self.source = ":SOURCE1"
         self.output = ":OUTP1"
         self.channel = ":CHAN1"
-        
-        self.set_power(power) #default power is 10
 
+        self.set_power(power)  # default power is 10
 
     @property
     def source_prefix(self):
@@ -100,7 +102,8 @@ class QuantifiManager(InstrumentManager):
             raise ValueError(f"Frequency '{frequency} {self.frequency_unit}' "
                              f"is above laser maximum '{max_freq} {self.frequency_unit}'")
 
-        self._send_message(f"{self.source_prefix}:FREQ {frequency} {self.frequency_unit}", read=False)
+        self._send_message(
+            f"{self.source_prefix}:FREQ {frequency} {self.frequency_unit}", read=False)
 
     def shift_frequency(self, frequency_shift: float):
         frequency = self.get_frequency()
@@ -127,7 +130,8 @@ class QuantifiManager(InstrumentManager):
             raise ValueError(f"Wavelength '{wavelength} {self.wavelength_unit}' "
                              f"is above laser maximum '{max_wav} {self.wavelength_unit}'")
 
-        self._send_message(f"{self.source_prefix}:WAV {wavelength} {self.wavelength_unit}", read=False)
+        self._send_message(
+            f"{self.source_prefix}:WAV {wavelength} {self.wavelength_unit}", read=False)
 
     def shift_wavelength(self, wavelength_shift: float):
         wavelength = self.get_wavelength()
@@ -154,10 +158,11 @@ class QuantifiManager(InstrumentManager):
             raise ValueError(f"Power '{power} {self.power_unit}' "
                              f"is above laser maximum '{max_power} {self.power_unit}'")
 
-        self._send_message(f"{self.source_prefix}:POW {power} {self.power_unit}", read=False)
+        self._send_message(
+            f"{self.source_prefix}:POW {power} {self.power_unit}", read=False)
         self._defined_power = power
 
-    def check_steady_state(self,res = 3):
+    def check_steady_state(self, res=3):
         return np.round(self.get_power("SET"), res) == np.round(self.get_power("ACT"), res)
 
     def wait_steady_state(self):
@@ -171,8 +176,8 @@ class QuantifiManager(InstrumentManager):
             if self.check_steady_state():
                 return True
             time.sleep(delay_time)
-            elapsed_time+=delay_time
-        
+            elapsed_time += delay_time
+
         return False
 
     def shift_power(self, power_shift: float):
@@ -193,7 +198,8 @@ class QuantifiManager(InstrumentManager):
         return float(self._send_message(f"{self.source_prefix}:POW? {param}"))
 
     def set_state(self, state: bool):
-        self._send_message(f"{self.output_prefix}:STATE {'ON' if state else 'OFF'}", read=False)
+        self._send_message(
+            f"{self.output_prefix}:STATE {'ON' if state else 'OFF'}", read=False)
 
     def get_state(self):
         state = self._send_message(f"{self.output_prefix}:STATE?")
@@ -211,7 +217,8 @@ class TunicsManager(InstrumentManager):
         super().__init__(resource_name)
 
         if not isinstance(self.instrument, SerialInstrument):
-            raise TypeError(f"The instrument with name '{resource_name}' is not of type {SerialInstrument}.")
+            raise TypeError(
+                f"The instrument with name '{resource_name}' is not of type {SerialInstrument}.")
 
         self.wavelength_unit = "NM"
         self.frequency_unit = "GHZ"
@@ -219,6 +226,7 @@ class TunicsManager(InstrumentManager):
         self.resolution = 0.001  # WARNING: This is in nm and doesn't consider wavelength_unit
         self.max_wait_time = 20
         self.name = "TUNICS"
+        self.offset = 9.835  # in nm. Actual laser wavelength is (set-offset)
         self.instrument.read_termination = '\r'
 
         # Empty the read register of anything from previous uses
@@ -230,14 +238,14 @@ class TunicsManager(InstrumentManager):
                 break
             i += 1
             if i == 100:
-                raise TimeoutError("Could not empty the readout register on the Tunics laser after 100 reads")
+                raise TimeoutError(
+                    "Could not empty the readout register on the Tunics laser after 100 reads")
 
         self.power_unit = self._power_unit
         self.set_state(True)
-        self.set_power(power) # Laser must be on to set power
+        self.set_power(power)  # Laser must be on to set power
         self.set_state(False)
         self.defined_power = power
-
 
     @property
     def power_unit(self):
@@ -247,12 +255,13 @@ class TunicsManager(InstrumentManager):
     def power_unit(self, unit: str):
         unit = unit.upper()
         if unit not in ("DBM", "MW"):
-            raise ValueError(f"Power unit '{unit}' must be either 'DBM' or 'MW'")
+            raise ValueError(
+                f"Power unit '{unit}' must be either 'DBM' or 'MW'")
 
         self._send_message(unit, read=False)
         self._power_unit = unit
 
-    def _send_message(self, message: str, read: bool=True):
+    def _send_message(self, message: str, read: bool = True):
         try:
             val = self.instrument.query(message).upper().strip("> ")
             if "=" in val:
@@ -345,7 +354,7 @@ class TunicsManager(InstrumentManager):
         if param == "MAX":
             return 1640
         elif param == "MIN":
-            return 1510 # The laser can go lower but then the maximum power drops below what should be possible
+            return 1510  # The laser can go lower but then the maximum power drops below what should be possible
         elif param == "":
             return float(self._send_message(f"L?"))
         self._check_error("COMMAND ERROR")
@@ -400,11 +409,13 @@ class PowerMeterManager(InstrumentManager):
     """ Wrapper class for managing power meter instruments
         Thorlab power meter SCPI commands can be found in the docs folder
     """
+
     def __init__(self, resource_name: str = 'USB0::0x1313::0x8078::P0010441::INSTR', average: int = 100):
         super().__init__(resource_name)
 
         if not isinstance(self.instrument, USBInstrument):
-            raise TypeError(f"The instrument with name '{resource_name}' is not of type {USBInstrument}.")
+            raise TypeError(
+                f"The instrument with name '{resource_name}' is not of type {USBInstrument}.")
 
         self.wavelength_unit = "NM"
         self.frequency_unit = "THZ"
@@ -427,20 +438,22 @@ class PowerMeterManager(InstrumentManager):
     def power_unit(self, unit: str):
         unit = unit.upper()
         if unit not in ("DBM", "W"):
-            raise ValueError(f"Power unit '{unit}' must be either 'DBM' or 'W'")
+            raise ValueError(
+                f"Power unit '{unit}' must be either 'DBM' or 'W'")
 
         self._send_message(f":SENSE:POWER:DC:UNIT {unit}", read=False)
         self._send_message("Configure:Scalar:POWer", read=False)
         self._power_unit = unit
 
     def set_wavelength(self, wavelength: float):
-        self._send_message(f"{self.sense_prefix}:WAV {wavelength} {self.wavelength_unit}", read=False)
+        self._send_message(
+            f"{self.sense_prefix}:WAV {wavelength} {self.wavelength_unit}", read=False)
 
     def set_average(self, average: int):
-        self._send_message(f":SENSE:AVERAGE:COUNT {average}", read = False)
+        self._send_message(f":SENSE:AVERAGE:COUNT {average}", read=False)
 
     def get_average(self):
-        return int( self._send_message(":SENSE:AVERAGE:COUNT?"))
+        return int(self._send_message(":SENSE:AVERAGE:COUNT?"))
 
     def shift_wavelength(self, wavelength_shift: float):
         wavelength = self.get_wavelength()
@@ -449,7 +462,7 @@ class PowerMeterManager(InstrumentManager):
     def get_wavelength(self):
         # The power meter always returns wavelength in units of 'nm'
         return float(self._send_message(f"{self.sense_prefix}:WAV?")) * \
-                     unit_conversion[self.wavelength_unit] / unit_conversion["NM"]
+            unit_conversion[self.wavelength_unit] / unit_conversion["NM"]
 
     def read(self):
         return self._send_message(":READ?")
